@@ -151,6 +151,7 @@ func (c *Client) Put(identity string, option common.ConnectOption) (err error) {
 		if err != nil {
 			return
 		}
+		go c.runtime[identity].Wait()
 	}()
 	wg.Wait()
 	return common.SaveConfig(common.ConfigOption{

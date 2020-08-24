@@ -8,9 +8,9 @@ import (
 	"gopkg.in/yaml.v3"
 	"io/ioutil"
 	"log"
+	"microtools-gossh/common"
+	pb "microtools-gossh/router"
 	"os"
-	"ssh-microservice/common"
-	pb "ssh-microservice/router"
 	"testing"
 )
 
@@ -197,42 +197,6 @@ func TestOtherExec(t *testing.T) {
 	logrus.Info(response.Data)
 }
 
-func TestDelete(t *testing.T) {
-	defer conn.Close()
-	client := pb.NewRouterClient(conn)
-	response, err := client.Delete(
-		context.Background(),
-		&pb.DeleteParameter{
-			Identity: "test",
-		},
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if response.Error != 0 {
-		t.Error(response.Msg)
-	}
-	logrus.Info(response.Msg)
-}
-
-func TestOtherDelete(t *testing.T) {
-	defer conn.Close()
-	client := pb.NewRouterClient(conn)
-	response, err := client.Delete(
-		context.Background(),
-		&pb.DeleteParameter{
-			Identity: "other",
-		},
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if response.Error != 0 {
-		t.Error(response.Msg)
-	}
-	logrus.Info(response.Msg)
-}
-
 func TestGet(t *testing.T) {
 	defer conn.Close()
 	client := pb.NewRouterClient(conn)
@@ -350,6 +314,42 @@ func TestOtherTunnels(t *testing.T) {
 					DstPort: 8080,
 				},
 			},
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if response.Error != 0 {
+		t.Error(response.Msg)
+	}
+	logrus.Info(response.Msg)
+}
+
+func TestDelete(t *testing.T) {
+	defer conn.Close()
+	client := pb.NewRouterClient(conn)
+	response, err := client.Delete(
+		context.Background(),
+		&pb.DeleteParameter{
+			Identity: "test",
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if response.Error != 0 {
+		t.Error(response.Msg)
+	}
+	logrus.Info(response.Msg)
+}
+
+func TestOtherDelete(t *testing.T) {
+	defer conn.Close()
+	client := pb.NewRouterClient(conn)
+	response, err := client.Delete(
+		context.Background(),
+		&pb.DeleteParameter{
+			Identity: "other",
 		},
 	)
 	if err != nil {
