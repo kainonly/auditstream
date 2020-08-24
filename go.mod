@@ -1,4 +1,4 @@
-module ssh-microservice
+module microtools-gossh
 
 go 1.15
 

@@ -6,8 +6,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh"
 	"log"
+	"microtools-gossh/common"
 	"net"
-	"ssh-microservice/common"
 	"sync"
 )
 

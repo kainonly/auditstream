@@ -3,9 +3,9 @@ package controller
 import (
 	"context"
 	"encoding/base64"
-	"ssh-microservice/client"
-	"ssh-microservice/common"
-	pb "ssh-microservice/router"
+	"microtools-gossh/client"
+	"microtools-gossh/common"
+	pb "microtools-gossh/router"
 )
 
 type controller struct {

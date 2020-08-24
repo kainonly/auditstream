@@ -5,14 +5,14 @@ import (
 	"gopkg.in/yaml.v3"
 	"io/ioutil"
 	"log"
+	"microtools-gossh/client"
+	"microtools-gossh/common"
+	"microtools-gossh/controller"
+	pb "microtools-gossh/router"
 	"net"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
-	"ssh-microservice/client"
-	"ssh-microservice/common"
-	"ssh-microservice/controller"
-	pb "ssh-microservice/router"
 )
 
 func main() {
