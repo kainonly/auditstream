@@ -1,0 +1,3 @@
+debug: true
+listen: 127.0.0.1:6000
+pool: 64
