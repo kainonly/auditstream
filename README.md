@@ -8,7 +8,6 @@ For configuration, please refer to `config/config.example.yml` and create `confi
 
 - **debug** `bool` Turn on debugging, that is `net/http/pprof`, and visit the address `http://localhost: 6060`
 - **listen** `string` Microservice listening address
-- **pool** `uint32` Memory pool in `MB`
 
 ## Service
 
