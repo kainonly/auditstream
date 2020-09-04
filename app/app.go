@@ -1,10 +1,13 @@
 package app
 
 import (
+	"elastic-transfer/app/controller"
+	"elastic-transfer/app/manage"
+	"elastic-transfer/app/types"
+	pb "elastic-transfer/router"
 	"google.golang.org/grpc"
 	"net"
 	"net/http"
-	"transfer-microservice/app/types"
 )
 
 type App struct {
@@ -30,10 +33,14 @@ func (app *App) Start() (err error) {
 		return
 	}
 	server := grpc.NewServer()
-	//manager, err := manage.NewElasticManager(app.option.Elastic)
-	//if err != nil {
-	//	return
-	//}
+	manager, err := manage.NewElasticManager(app.option.Elastic)
+	if err != nil {
+		return
+	}
+	pb.RegisterRouterServer(
+		server,
+		controller.New(manager),
+	)
 	server.Serve(listen)
 	return
 }

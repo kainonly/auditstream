@@ -1,12 +1,12 @@
 package manage
 
 import (
+	"elastic-transfer/app/types"
 	"gopkg.in/yaml.v3"
 	"io/ioutil"
 	"log"
 	"os"
 	"testing"
-	"transfer-microservice/app/types"
 )
 
 var manager *ElasticManager
@@ -28,11 +28,4 @@ func TestMain(m *testing.M) {
 		log.Fatalln(err)
 	}
 	os.Exit(m.Run())
-}
-
-func TestElasticManager_Index(t *testing.T) {
-	err := manager.Index("test", []byte(`{"name":"kain"}`))
-	if err != nil {
-		t.Fatal(err)
-	}
 }

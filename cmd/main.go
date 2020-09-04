@@ -1,12 +1,12 @@
 package main
 
 import (
+	"elastic-transfer/app"
+	"elastic-transfer/app/types"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 	"io/ioutil"
 	"os"
-	"transfer-microservice/app"
-	"transfer-microservice/app/types"
 )
 
 func main() {
