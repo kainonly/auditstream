@@ -30,9 +30,10 @@ message Response {
 
 message Information {
   string identity = 1;
-  string validate = 2;
-  string topic = 3;
-  string key = 4;
+  string index = 2;
+  string validate = 3;
+  string topic = 4;
+  string key = 5;
 }
 
 message GetParameter {

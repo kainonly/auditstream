@@ -34,7 +34,7 @@ func (c *MessageQueue) reconnected() {
 	}
 }
 
-func (c *MessageQueue) pushFromAmqp(exchange string, key string, body []byte) (err error) {
+func (c *MessageQueue) pushFromAmqp(exchange string, key string, data []byte) (err error) {
 	var channel *amqp.Channel
 	channel, err = c.Amqp.Conn.Channel()
 	if err != nil {
@@ -43,7 +43,7 @@ func (c *MessageQueue) pushFromAmqp(exchange string, key string, body []byte) (e
 	defer channel.Close()
 	err = channel.Publish(exchange, key, false, false, amqp.Publishing{
 		ContentType: "application/json",
-		Body:        body,
+		Body:        data,
 	})
 	if err != nil {
 		return

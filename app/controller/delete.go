@@ -6,5 +6,9 @@ import (
 )
 
 func (c *controller) Delete(ctx context.Context, param *pb.DeleteParameter) (*pb.Response, error) {
-	return nil, nil
+	err := c.manager.Delete(param.Identity)
+	if err != nil {
+		return c.response(err)
+	}
+	return c.response(nil)
 }
