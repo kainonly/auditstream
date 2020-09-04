@@ -30,6 +30,10 @@ func (app *App) Start() (err error) {
 		return
 	}
 	server := grpc.NewServer()
+	//manager, err := manage.NewElasticManager(app.option.Elastic)
+	//if err != nil {
+	//	return
+	//}
 	server.Serve(listen)
 	return
 }

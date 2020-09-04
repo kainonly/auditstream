@@ -1,9 +1,16 @@
 syntax = "proto3";
 package elastic.transfer;
 service Router {
+  rpc Put (PutParameter) returns (Response) {
+  }
+
 }
 
 message Response {
   uint32 error = 1;
   string msg = 2;
+}
+
+message PutParameter{
+
 }
