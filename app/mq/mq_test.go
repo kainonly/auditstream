@@ -1,7 +1,6 @@
-package manage
+package mq
 
 import (
-	"elastic-transfer/app/mq"
 	"elastic-transfer/app/types"
 	"gopkg.in/yaml.v3"
 	"io/ioutil"
@@ -10,7 +9,7 @@ import (
 	"testing"
 )
 
-var manager *ElasticManager
+var mqlib *MessageQueue
 
 func TestMain(m *testing.M) {
 	os.Chdir("../..")
@@ -27,33 +26,16 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		log.Fatalln("Service configuration file parsing failed", err)
 	}
-	mqlib, err := mq.NewMessageQueue(config.Mq)
+	mqlib, err = NewMessageQueue(config.Mq)
 	if err != nil {
 		return
-	}
-	manager, err = NewElasticManager(config.Elastic, mqlib)
-	if err != nil {
-		log.Fatalln(err)
 	}
 	os.Exit(m.Run())
 }
 
-func TestElasticManager_Put(t *testing.T) {
-	err := manager.Put(types.PipeOption{
-		Identity: "task",
-		Index:    "task-log",
-		Validate: `{"type":"object","properties":{"name":{"type":"string"}}}`,
-		Topic:    "sys.schedule",
-		Key:      "",
-	})
+func TestMessageQueue_Push(t *testing.T) {
+	err := mqlib.Push("test", "", []byte(`{"name":"kain"}`))
 	if err != nil {
-		t.Error(err)
-	}
-}
-
-func TestElasticManager_Delete(t *testing.T) {
-	err := manager.Delete("task")
-	if err != nil {
-		t.Error(err)
+		log.Fatalln(err)
 	}
 }
