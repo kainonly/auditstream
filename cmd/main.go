@@ -10,6 +10,9 @@ import (
 )
 
 func main() {
+	if _, err := os.Stat("./config/autoload"); os.IsNotExist(err) {
+		os.Mkdir("./config/autoload", os.ModeDir)
+	}
 	if _, err := os.Stat("./config/config.yml"); os.IsNotExist(err) {
 		logrus.Fatalln("The service configuration file does not exist")
 	}
