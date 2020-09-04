@@ -10,7 +10,7 @@ service Router {
   rpc All (NoParameter) returns (AllResponse) {
   }
 
-  rpc Put (PutParameter) returns (Response) {
+  rpc Put (Information) returns (Response) {
   }
 
   rpc Delete (DeleteParameter) returns (Response) {
@@ -30,10 +30,9 @@ message Response {
 
 message Information {
   string identity = 1;
-  string service = 2;
-  string validate = 3;
-  string topic = 4;
-  bool status = 5;
+  string validate = 2;
+  string topic = 3;
+  string key = 4;
 }
 
 message GetParameter {
@@ -60,13 +59,6 @@ message AllResponse {
   uint32 error = 1;
   string msg = 2;
   repeated string data = 3;
-}
-
-message PutParameter{
-  string identity = 1;
-  string service = 2;
-  string validate = 3;
-  string topic = 4;
 }
 
 message DeleteParameter {

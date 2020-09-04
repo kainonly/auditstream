@@ -4,5 +4,5 @@ elastic:
   addresses:
     - http://localhost:9200
 mq:
-  dirve: amqp
-  amqp:
+  drive: amqp
+  url:

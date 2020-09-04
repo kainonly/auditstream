@@ -3,6 +3,7 @@ package app
 import (
 	"elastic-transfer/app/controller"
 	"elastic-transfer/app/manage"
+	"elastic-transfer/app/mq"
 	"elastic-transfer/app/types"
 	pb "elastic-transfer/router"
 	"google.golang.org/grpc"
@@ -33,9 +34,13 @@ func (app *App) Start() (err error) {
 		return
 	}
 	server := grpc.NewServer()
+	mqlib, err := mq.NewMessageQueue(app.option.Mq)
+	if err != nil {
+		return
+	}
 	manager, err := manage.NewElasticManager(
 		app.option.Elastic,
-		app.option.Mq,
+		mqlib,
 	)
 	if err != nil {
 		return
