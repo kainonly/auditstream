@@ -33,7 +33,10 @@ func (app *App) Start() (err error) {
 		return
 	}
 	server := grpc.NewServer()
-	manager, err := manage.NewElasticManager(app.option.Elastic)
+	manager, err := manage.NewElasticManager(
+		app.option.Elastic,
+		app.option.Mq,
+	)
 	if err != nil {
 		return
 	}
