@@ -23,7 +23,18 @@ func NewElasticManager(config elasticsearch.Config, mq *mq.MessageQueue) (manage
 		return
 	}
 	manager.pipes = make(map[string]*types.PipeOption)
+	var pipesOptions []types.PipeOption
+	pipesOptions, err = manager.schema.Lists()
+	if err != nil {
+		return
+	}
 	manager.schema = schema.New()
+	for _, option := range pipesOptions {
+		err = manager.Put(option)
+		if err != nil {
+			return
+		}
+	}
 	return
 }
 
