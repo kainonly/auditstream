@@ -56,6 +56,46 @@ func TestController_Put(t *testing.T) {
 	}
 }
 
+func TestController_All(t *testing.T) {
+	response, err := client.All(context.Background(), &pb.NoParameter{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if response.Error != 0 {
+		t.Error(response.Msg)
+	} else {
+		t.Log(response.Msg)
+	}
+}
+
+func TestController_Get(t *testing.T) {
+	response, err := client.Get(context.Background(), &pb.GetParameter{
+		Identity: "task",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if response.Error != 0 {
+		t.Error(response.Msg)
+	} else {
+		t.Log(response.Msg)
+	}
+}
+
+func TestController_Lists(t *testing.T) {
+	response, err := client.Lists(context.Background(), &pb.ListsParameter{
+		Identity: []string{"task"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if response.Error != 0 {
+		t.Error(response.Msg)
+	} else {
+		t.Log(response.Msg)
+	}
+}
+
 func TestController_Push(t *testing.T) {
 	response, err := client.Push(context.Background(), &pb.PushParameter{
 		Identity: "task",
