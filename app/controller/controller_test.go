@@ -110,3 +110,17 @@ func TestController_Push(t *testing.T) {
 		t.Log(response.Msg)
 	}
 }
+
+func TestController_Delete(t *testing.T) {
+	response, err := client.Delete(context.Background(), &pb.DeleteParameter{
+		Identity: "task",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if response.Error != 0 {
+		t.Error(response.Msg)
+	} else {
+		t.Log(response.Msg)
+	}
+}
