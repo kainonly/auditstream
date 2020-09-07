@@ -55,3 +55,18 @@ func TestController_Put(t *testing.T) {
 		t.Log(response.Msg)
 	}
 }
+
+func TestController_Push(t *testing.T) {
+	response, err := client.Push(context.Background(), &pb.PushParameter{
+		Identity: "task",
+		Data:     []byte(`{"name":"kain"}`),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if response.Error != 0 {
+		t.Error(response.Msg)
+	} else {
+		t.Log(response.Msg)
+	}
+}

@@ -9,6 +9,7 @@ import (
 	"google.golang.org/grpc"
 	"net"
 	"net/http"
+	_ "net/http/pprof"
 )
 
 type App struct {
