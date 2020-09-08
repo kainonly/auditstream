@@ -111,6 +111,23 @@ func TestController_Push(t *testing.T) {
 	}
 }
 
+func BenchmarkController_Push(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		response, err := client.Push(context.Background(), &pb.PushParameter{
+			Identity: "task",
+			Data:     []byte(`{"name":"kain"}`),
+		})
+		if err != nil {
+			b.Fatal(err)
+		}
+		if response.Error != 0 {
+			b.Error(response.Msg)
+		} else {
+			b.Log(response.Msg)
+		}
+	}
+}
+
 func TestController_Delete(t *testing.T) {
 	response, err := client.Delete(context.Background(), &pb.DeleteParameter{
 		Identity: "task",

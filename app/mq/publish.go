@@ -14,7 +14,7 @@ func (c *MessageQueue) Publish(topic string, key string, data []byte) (err error
 
 func (c *MessageQueue) publishFromAmqp(exchange string, key string, data []byte) (err error) {
 	var channel *amqp.Channel
-	channel, err = c.Amqp.Conn.Channel()
+	channel, err = c.amqp.conn.Channel()
 	if err != nil {
 		return
 	}

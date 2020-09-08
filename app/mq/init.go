@@ -2,25 +2,21 @@ package mq
 
 import (
 	"elastic-transfer/app/types"
-	"github.com/streadway/amqp"
 )
 
 type MessageQueue struct {
 	types.MqOption
-	Amqp *types.AmqpOption
+	amqp *AmqpDrive
 }
 
 func NewMessageQueue(option types.MqOption) (mq *MessageQueue, err error) {
 	mq = new(MessageQueue)
 	mq.MqOption = option
 	if mq.Drive == "amqp" {
-		mq.Amqp = new(types.AmqpOption)
-		mq.Amqp.Conn, err = amqp.Dial(mq.Url)
+		mq.amqp, err = NewAmqpDrive(mq.Url)
 		if err != nil {
 			return
 		}
-		mq.Amqp.NotifyConnClose = make(chan *amqp.Error)
-		mq.Amqp.Conn.NotifyClose(mq.Amqp.NotifyConnClose)
 	}
 	return
 }

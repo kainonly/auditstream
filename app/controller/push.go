@@ -6,9 +6,6 @@ import (
 )
 
 func (c *controller) Push(ctx context.Context, param *pb.PushParameter) (*pb.Response, error) {
-	err := c.manager.Push(param.Identity, param.Data)
-	if err != nil {
-		return c.response(err)
-	}
+	go c.manager.Push(param.Identity, param.Data)
 	return c.response(nil)
 }
