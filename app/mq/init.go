@@ -24,13 +24,3 @@ func NewMessageQueue(option types.MqOption) (mq *MessageQueue, err error) {
 	}
 	return
 }
-
-func (c *MessageQueue) Push(topic string, key string, data []byte) (err error) {
-	if c.Drive == "amqp" {
-		err = c.pushFromAmqp(topic, key, data)
-		if err != nil {
-			return
-		}
-	}
-	return
-}

@@ -6,42 +6,34 @@ import (
 	"elastic-transfer/app/mq"
 	"elastic-transfer/app/types"
 	pb "elastic-transfer/router"
+	"github.com/elastic/go-elasticsearch/v8"
 	"google.golang.org/grpc"
 	"net"
 	"net/http"
 	_ "net/http/pprof"
 )
 
-type App struct {
-	option *types.Config
-}
-
-func New(config types.Config) *App {
-	app := new(App)
-	app.option = &config
-	return app
-}
-
-func (app *App) Start() (err error) {
+func Application(option *types.Config) (err error) {
 	// Turn on debugging
-	if app.option.Debug {
+	if option.Debug {
 		go func() {
 			http.ListenAndServe(":6060", nil)
 		}()
 	}
 	// Start microservice
-	listen, err := net.Listen("tcp", app.option.Listen)
+	listen, err := net.Listen("tcp", option.Listen)
 	if err != nil {
 		return
 	}
 	server := grpc.NewServer()
-	mqlib, err := mq.NewMessageQueue(app.option.Mq)
+	elastic, err := elasticsearch.NewClient(option.Elastic)
+	mqclient, err := mq.NewMessageQueue(option.Mq)
 	if err != nil {
 		return
 	}
 	manager, err := manage.NewElasticManager(
-		app.option.Elastic,
-		mqlib,
+		elastic,
+		mqclient,
 	)
 	if err != nil {
 		return

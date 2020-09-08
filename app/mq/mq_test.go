@@ -34,7 +34,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestMessageQueue_Push(t *testing.T) {
-	err := mqlib.Push("test", "", []byte(`{"name":"kain"}`))
+	err := mqlib.Publish("test", "", []byte(`{"name":"kain"}`))
 	if err != nil {
 		log.Fatalln(err)
 	}

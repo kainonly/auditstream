@@ -9,7 +9,7 @@ func (c *ElasticManager) Push(identity string, data []byte) (err error) {
 	pipe := c.pipes[identity]
 	err = actions.Push(c.client, pipe.Index, data)
 	if err != nil {
-		err = c.mq.Push(pipe.Topic, pipe.Key, data)
+		err = c.mq.Publish(pipe.Topic, pipe.Key, data)
 		if err != nil {
 			return
 		}

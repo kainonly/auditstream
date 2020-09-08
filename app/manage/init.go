@@ -15,13 +15,10 @@ type ElasticManager struct {
 	schema *schema.Schema
 }
 
-func NewElasticManager(config elasticsearch.Config, mq *mq.MessageQueue) (manager *ElasticManager, err error) {
+func NewElasticManager(client *elasticsearch.Client, mq *mq.MessageQueue) (manager *ElasticManager, err error) {
 	manager = new(ElasticManager)
-	manager.client, err = elasticsearch.NewClient(config)
+	manager.client = client
 	manager.mq = mq
-	if err != nil {
-		return
-	}
 	manager.pipes = make(map[string]*types.PipeOption)
 	manager.schema = schema.New()
 	var pipesOptions []types.PipeOption
