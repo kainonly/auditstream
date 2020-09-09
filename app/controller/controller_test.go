@@ -54,6 +54,21 @@ func TestController_Put(t *testing.T) {
 	} else {
 		t.Log(response.Msg)
 	}
+	response, err = client.Put(context.Background(), &pb.Information{
+		Identity: "mq-subscriber",
+		Index:    "mq-subscriber-logs",
+		Validate: `{"type":"object"}`,
+		Topic:    "sys.subscriber",
+		Key:      "",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if response.Error != 0 {
+		t.Error(response.Msg)
+	} else {
+		t.Log(response.Msg)
+	}
 }
 
 func TestController_All(t *testing.T) {
@@ -131,6 +146,17 @@ func BenchmarkController_Push(b *testing.B) {
 func TestController_Delete(t *testing.T) {
 	response, err := client.Delete(context.Background(), &pb.DeleteParameter{
 		Identity: "schedule",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if response.Error != 0 {
+		t.Error(response.Msg)
+	} else {
+		t.Log(response.Msg)
+	}
+	response, err = client.Delete(context.Background(), &pb.DeleteParameter{
+		Identity: "mq-subscriber",
 	})
 	if err != nil {
 		t.Fatal(err)
