@@ -27,6 +27,9 @@ func Application(option *types.Config) (err error) {
 	}
 	server := grpc.NewServer()
 	elastic, err := elasticsearch.NewClient(option.Elastic)
+	if err != nil {
+		return
+	}
 	mqclient, err := mq.NewMessageQueue(option.Mq)
 	if err != nil {
 		return

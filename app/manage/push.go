@@ -1,6 +1,8 @@
 package manage
 
-import "elastic-transfer/app/actions"
+import (
+	"elastic-transfer/app/actions"
+)
 
 func (c *ElasticManager) Push(identity string, data []byte) (err error) {
 	if err = c.empty(identity); err != nil {
