@@ -8,7 +8,7 @@ Provide online and offline template data writing for elasticsearch
 [![Docker Pulls](https://img.shields.io/docker/pulls/kainonly/elastic-transfer.svg?style=flat-square)](https://hub.docker.com/r/kainonly/elastic-transfer)
 [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](https://raw.githubusercontent.com/codexset/elastic-transfer/master/LICENSE)
 
-![guide](guide.svg)
+![guide](https://cdn.kainonly.com/resource/elastic-transfer.svg)
 
 ## Setup
 
