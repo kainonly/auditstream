@@ -17,7 +17,7 @@ Example using docker compose
 ```yaml
 version: "3.8"
 services: 
-  subscriber:
+  transfer:
     image: kainonly/elastic-transfer
     restart: always
     volumes:
