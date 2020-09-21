@@ -43,7 +43,7 @@ func TestController_Put(t *testing.T) {
 		Identity: "schedule",
 		Index:    "schedule-logs",
 		Validate: `{"type":"object"}`,
-		Topic:    "sys.schedule",
+		Topic:    "logs.schedule",
 		Key:      "",
 	})
 	if err != nil {
@@ -58,7 +58,37 @@ func TestController_Put(t *testing.T) {
 		Identity: "mq-subscriber",
 		Index:    "mq-subscriber-logs",
 		Validate: `{"type":"object"}`,
-		Topic:    "sys.subscriber",
+		Topic:    "logs.subscriber",
+		Key:      "",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if response.Error != 0 {
+		t.Error(response.Msg)
+	} else {
+		t.Log(response.Msg)
+	}
+	response, err = client.Put(context.Background(), &pb.Information{
+		Identity: "mq-publish",
+		Index:    "mq-publish-logs",
+		Validate: `{"type":"object"}`,
+		Topic:    "logs.publish",
+		Key:      "",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if response.Error != 0 {
+		t.Error(response.Msg)
+	} else {
+		t.Log(response.Msg)
+	}
+	response, err = client.Put(context.Background(), &pb.Information{
+		Identity: "mq-message",
+		Index:    "mq-message-logs",
+		Validate: `{"type":"object"}`,
+		Topic:    "logs.message",
 		Key:      "",
 	})
 	if err != nil {
