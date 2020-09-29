@@ -172,7 +172,7 @@ func TestController_Push(t *testing.T) {
 }
 
 func BenchmarkController_Push(b *testing.B) {
-	for i := 0; i < 100000; i++ {
+	for i := 0; i < b.N; i++ {
 		response, err := client.Push(context.Background(), &pb.PushParameter{
 			Identity: "analysis",
 			Data:     []byte(`{"name":"kain"}`),
@@ -183,7 +183,7 @@ func BenchmarkController_Push(b *testing.B) {
 		if response.Error != 0 {
 			b.Error(response.Msg)
 		} else {
-			b.Log(response.Msg, ":", i)
+			b.Log(response.Msg)
 		}
 
 	}
