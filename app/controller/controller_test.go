@@ -41,7 +41,7 @@ func TestMain(m *testing.M) {
 func TestController_Put(t *testing.T) {
 	response, err := client.Put(context.Background(), &pb.Information{
 		Identity: "schedule",
-		Index:    "schedule-logs",
+		Index:    "schedule-logs-alpha",
 		Validate: `{"type":"object"}`,
 		Topic:    "logs.schedule",
 		Key:      "",
@@ -56,7 +56,7 @@ func TestController_Put(t *testing.T) {
 	}
 	response, err = client.Put(context.Background(), &pb.Information{
 		Identity: "mq-subscriber",
-		Index:    "mq-subscriber-logs",
+		Index:    "mq-subscriber-logs-alpha",
 		Validate: `{"type":"object"}`,
 		Topic:    "logs.subscriber",
 		Key:      "",
@@ -71,7 +71,7 @@ func TestController_Put(t *testing.T) {
 	}
 	response, err = client.Put(context.Background(), &pb.Information{
 		Identity: "mq-publish",
-		Index:    "mq-publish-logs",
+		Index:    "mq-publish-logs-alpha",
 		Validate: `{"type":"object"}`,
 		Topic:    "logs.publish",
 		Key:      "",
@@ -86,9 +86,24 @@ func TestController_Put(t *testing.T) {
 	}
 	response, err = client.Put(context.Background(), &pb.Information{
 		Identity: "mq-message",
-		Index:    "mq-message-logs",
+		Index:    "mq-message-logs-alpha",
 		Validate: `{"type":"object"}`,
 		Topic:    "logs.message",
+		Key:      "",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if response.Error != 0 {
+		t.Error(response.Msg)
+	} else {
+		t.Log(response.Msg)
+	}
+	response, err = client.Put(context.Background(), &pb.Information{
+		Identity: "analysis",
+		Index:    "analysis-alpha",
+		Validate: `{"type":"object"}`,
+		Topic:    "analysis",
 		Key:      "",
 	})
 	if err != nil {
@@ -157,9 +172,9 @@ func TestController_Push(t *testing.T) {
 }
 
 func BenchmarkController_Push(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for i := 0; i < 100000; i++ {
 		response, err := client.Push(context.Background(), &pb.PushParameter{
-			Identity: "schedule",
+			Identity: "analysis",
 			Data:     []byte(`{"name":"kain"}`),
 		})
 		if err != nil {
@@ -168,8 +183,9 @@ func BenchmarkController_Push(b *testing.B) {
 		if response.Error != 0 {
 			b.Error(response.Msg)
 		} else {
-			b.Log(response.Msg)
+			b.Log(response.Msg, ":", i)
 		}
+
 	}
 }
 

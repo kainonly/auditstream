@@ -6,16 +6,19 @@ import (
 	"elastic-transfer/app/types"
 	"errors"
 	"github.com/elastic/go-elasticsearch/v8"
+	"github.com/panjf2000/ants/v2"
 )
 
 type ElasticManager struct {
-	client *elasticsearch.Client
-	mq     *mq.MessageQueue
-	pipes  map[string]*types.PipeOption
-	schema *schema.Schema
+	client  *elasticsearch.Client
+	mq      *mq.MessageQueue
+	pipes   map[string]*types.PipeOption
+	schema  *schema.Schema
+	pool    *ants.Pool
+	runtime int64
 }
 
-func NewElasticManager(client *elasticsearch.Client, mq *mq.MessageQueue) (manager *ElasticManager, err error) {
+func NewElasticManager(client *elasticsearch.Client, mq *mq.MessageQueue, pool *ants.Pool) (manager *ElasticManager, err error) {
 	manager = new(ElasticManager)
 	manager.client = client
 	manager.mq = mq
@@ -32,6 +35,8 @@ func NewElasticManager(client *elasticsearch.Client, mq *mq.MessageQueue) (manag
 			return
 		}
 	}
+	manager.pool = pool
+	manager.runtime = 0
 	return
 }
 

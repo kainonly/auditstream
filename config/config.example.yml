@@ -1,5 +1,5 @@
-debug: true
 listen: 127.0.0.1:6000
+debug: :6060
 elastic:
   addresses:
     - http://localhost:9200

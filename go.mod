@@ -6,6 +6,7 @@ require (
 	github.com/elastic/go-elasticsearch/v8 v8.0.0-20200901131320-e21ad8e37e8d
 	github.com/golang/protobuf v1.4.2
 	github.com/json-iterator/go v1.1.10 // indirect
+	github.com/panjf2000/ants/v2 v2.4.2
 	github.com/sirupsen/logrus v1.6.0
 	github.com/streadway/amqp v1.0.0
 	github.com/xeipuuv/gojsonschema v1.2.0 // indirect
