@@ -1,14 +1,12 @@
-# elastic-transfer
+# Elastic Transfer
 
 Provide online and offline template data writing for elasticsearch
 
-[![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/kainonly/elastic-transfer?style=flat-square)](https://github.com/kainonly/elastic-transfer)
-[![Github Actions](https://img.shields.io/github/workflow/status/kainonly/elastic-transfer/release?style=flat-square)](https://github.com/kainonly/elastic-transfer/actions)
+[![Github Actions](https://img.shields.io/github/workflow/status/kain-lab/elastic-transfer/release?style=flat-square)](https://github.com/kain-lab/elastic-transfer/actions)
+[![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/kain-lab/elastic-transfer?style=flat-square)](https://github.com/kain-lab/elastic-transfer)
 [![Image Size](https://img.shields.io/docker/image-size/kainonly/elastic-transfer?style=flat-square)](https://hub.docker.com/r/kainonly/elastic-transfer)
 [![Docker Pulls](https://img.shields.io/docker/pulls/kainonly/elastic-transfer.svg?style=flat-square)](https://hub.docker.com/r/kainonly/elastic-transfer)
-[![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](https://raw.githubusercontent.com/kainonly/elastic-transfer/master/LICENSE)
-
-![guide](https://cdn.kainonly.com/resource/elastic-transfer.svg)
+[![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](https://raw.githubusercontent.com/kain-lab/elastic-transfer/master/LICENSE)
 
 ## Setup
 
@@ -24,6 +22,7 @@ services:
       - ./transfer/config:/app/config
     ports:
       - 6000:6000
+      - 8080:8080
 ```
 
 ## Configuration
@@ -31,207 +30,284 @@ services:
 For configuration, please refer to `config/config.example.yml`
 
 - **debug** `string` Start debugging, ie `net/http/pprof`, access address is`http://localhost:6060`
-- **listen** `string` Microservice listening address
+- **listen** `string` grpc server listening address
+- **gateway** `string` API gateway server listening address
 - **elastic** `object` Elasticsearch configuration
     - **addresses** `array` hosts
     - **username** `string`
     - **password** `string`
     - **cloud_id** `string` cloud id
     - **api_key** `string` api key
-- **mq** `object`
+- **queue** `object`
     - **drive** `string` Contains: `amqp`
-    - **url** `string` E.g `amqp://guest:guest@localhost:5672/`
+    - **option** `object` (amqp) 
+        - **url** `string` E.g `amqp://guest:guest@localhost:5672/`
     
 ## Service
 
-The service is based on gRPC and you can view `router/router.proto`
+The service is based on gRPC to view `api/api.proto`
 
 ```proto
 syntax = "proto3";
 package elastic.transfer;
-service Router {
-  rpc Get (GetParameter) returns (GetResponse) {
-  }
+option go_package = "elastic-transfer/gen/go/elastic/transfer";
+import "google/protobuf/empty.proto";
+import "google/api/annotations.proto";
 
-  rpc Lists (ListsParameter) returns (ListsResponse) {
+service API {
+  rpc Get (ID) returns (Data) {
+    option (google.api.http) = {
+      get: "/transfer",
+    };
   }
-
-  rpc All (NoParameter) returns (AllResponse) {
+  rpc Lists (IDs) returns (DataLists) {
+    option (google.api.http) = {
+      post: "/transfers",
+      body: "*"
+    };
   }
-
-  rpc Put (Information) returns (Response) {
+  rpc All (google.protobuf.Empty) returns (IDs) {
+    option (google.api.http) = {
+      get: "/transfers",
+    };
   }
-
-  rpc Delete (DeleteParameter) returns (Response) {
+  rpc Put (Data) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      put: "/transfer",
+      body: "*",
+    };
   }
-
-  rpc Push (PushParameter) returns (Response) {
+  rpc Delete (ID) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      delete: "/transfer",
+    };
+  }
+  rpc Push (Body) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      post: "/push",
+      body: "*"
+    };
   }
 }
 
-message NoParameter {
-}
-
-message Response {
-  uint32 error = 1;
-  string msg = 2;
-}
-
-message Information {
-  string identity = 1;
+message Data {
+  string id = 1;
   string index = 2;
   string validate = 3;
   string topic = 4;
   string key = 5;
 }
 
-message GetParameter {
-  string identity = 1;
+message ID {
+  string id = 1;
 }
 
-message GetResponse {
-  uint32 error = 1;
-  string msg = 2;
-  Information data = 3;
+message IDs {
+  repeated string ids = 1;
 }
 
-message ListsParameter {
-  repeated string identity = 1;
-}
-
-message ListsResponse {
-  uint32 error = 1;
-  string msg = 2;
-  repeated Information data = 3;
-}
-
-message AllResponse {
-  uint32 error = 1;
-  string msg = 2;
-  repeated string data = 3;
+message DataLists {
+  repeated Data data = 1;
 }
 
 message DeleteParameter {
   string identity = 1;
 }
 
-message PushParameter {
-  string identity = 1;
-  bytes data = 2;
+message Body {
+  string id = 1;
+  bytes content = 2;
 }
 ```
 
-#### rpc Get (GetParameter) returns (GetResponse) {}
+## Get (ID) returns (Data)
 
 Get transfer configuration
 
-- GetParameter
-  - **identity** `string` transfer id
-- GetResponse
-  - **error** `uint32` error code, `0` is normal
-  - **msg** `string` error feedback
-  - **data** `Information` result
-    - **identity** `string` transfer id
-    - **index** `string` elasticsearch index
-    - **validate** `string` JSON Schema
-    - **topic** `string` Topic name of the message queue
-    - **key** `string` The queue name of the message queue
+### RPC
 
-
-```golang
-client := pb.NewRouterClient(conn)
-response, err := client.Get(context.Background(), &pb.GetParameter{
-  Identity: "task",
-})
-```
-
-#### rpc Lists (ListsParameter) returns (ListsResponse) {}
-
-Lists transfer configuration
-
-- ListsParameter
-  - **identity** `string` transfer id
-- ListsResponse
-  - **error** `uint32` error code, `0` is normal
-  - **msg** `string` error feedback
-  - **data** `[]Information` result
-    - **identity** `string` transfer id
-    - **index** `string` elasticsearch index
-    - **validate** `string` JSON Schema
-    - **topic** `string` Topic name of the message queue
-    - **key** `string` The queue name of the message queue
-
-```golang
-client := pb.NewRouterClient(conn)
-response, err := client.Lists(context.Background(), &pb.ListsParameter{
-  Identity: []string{"task"},
-})
-```
-
-#### rpc All (NoParameter) returns (AllResponse) {}
-
-- NoParameter
-- AllResponse
-  - **error** `uint32` error code, `0` is normal
-  - **msg** `string` error feedback
-  - **data** `[]string` transfer IDs
-
-```golang
-client := pb.NewRouterClient(conn)
-response, err := client.All(context.Background(), &pb.NoParameter{})
-```
-
-#### rpc Put (Information) returns (Response) {}
-
-- Information
-  - **identity** `string` transfer id
+- **ID**
+  - **id** `string` transfer id
+- **Data**
+  - **id** `string` transfer id
   - **index** `string` elasticsearch index
   - **validate** `string` JSON Schema
   - **topic** `string` Topic name of the message queue
   - **key** `string` The queue name of the message queue
-- Response
-  - **error** `uint32` error code, `0` is normal
-  - **msg** `string` error feedback
+
 
 ```golang
 client := pb.NewRouterClient(conn)
-response, err := client.Put(context.Background(), &pb.Information{
-  Identity: "task",
-  Index:    "task-log",
-  Validate: `{"type":"object","properties":{"name":{"type":"string"}}}`,
-  Topic:    "sys.schedule",
+response, err := client.Get(context.Background(), &pb.ID{
+		Id: "debug",
+})
+```
+
+### API Gateway
+
+- **PUT** `/client`
+
+```http
+GET /transfer?id=debug HTTP/1.1
+Host: localhost:8080
+```
+
+## Lists (IDs) returns (DataLists)
+
+Lists transfer configuration
+
+### RPC
+
+- **IDs**
+  - **ids** `[]string` transfer id
+- **DataLists**
+  - **data** `[]Data`
+    - **id** `string` transfer id
+    - **index** `string` elasticsearch index
+    - **validate** `string` JSON Schema
+    - **topic** `string` Topic name of the message queue
+    - **key** `string` The queue name of the message queue
+
+```golang
+client := pb.NewRouterClient(conn)
+response, err := client.Lists(context.Background(), &pb.IDs{
+  Ids: []string{"debug"},
+})
+```
+
+### API Gateway
+
+- **POST** `/transfers`
+
+```http
+POST /transfers HTTP/1.1
+Host: localhost:8080
+Content-Type: application/json
+
+{
+    "ids":["debug"]
+}
+```
+
+## All (google.protobuf.Empty) returns (IDs)
+
+Get all transfer configuration identifiers
+
+### RPC
+
+- **IDs**
+  - **ids** `[]string` transfer id
+
+```golang
+client := pb.NewRouterClient(conn)
+response, err := client.All(context.Background(), &empty.Empty{})
+```
+
+### API Gateway
+
+- **GET** `/transfers`
+
+```http
+GET /transfers HTTP/1.1
+Host: localhost:8080
+```
+
+## Put (Data) returns (google.protobuf.Empty)
+
+Put transfer configuration
+
+### RPC
+
+- **Data**
+  - **id** `string` transfer id
+  - **index** `string` elasticsearch index
+  - **validate** `string` JSON Schema
+  - **topic** `string` Topic name of the message queue
+  - **key** `string` The queue name of the message queue
+
+```golang
+client := pb.NewRouterClient(conn)
+response, err := client.Put(context.Background(), &pb.Data{
+  Id:       "debug",
+  Index:    "debug-logs-alpha",
+  Validate: `{"type":"object"}`,
+  Topic:    "logs.debug",
   Key:      "",
 })
 ```
 
-#### rpc Delete (DeleteParameter) returns (Response) {}
+### API Gateway
 
-- DeleteParameter
-  - **identity** `string` transfer id
-- Response
-  - **error** `uint32` error code, `0` is normal
-  - **msg** `string` error feedback
+- **PUT** `/transfer`
+
+```http
+PUT /transfer HTTP/1.1
+Host: localhost:8080
+Content-Type: application/json
+
+{
+    "id": "debug",
+    "index": "debug-logs-alpha",
+    "validate": "{\"type\":\"object\"}",
+    "topic": "logs.debug",
+    "key": ""
+}
+```
+
+## Delete (ID) returns (google.protobuf.Empty)
+
+Remove transfer configuration
+
+### RPC
+
+- **ID**
+  - **id** `string` transfer id
 
 ```golang
 client := pb.NewRouterClient(conn)
-response, err := client.Delete(context.Background(), &pb.DeleteParameter{
-  Identity: "task",
+response, err := client.Delete(context.Background(), &pb.ID{
+  Id: "debug",
 })
 ```
 
-#### rpc Push (PushParameter) returns (Response) {}
+### API Gateway
 
-- PushParameter
-  - **identity** `string` transfer id
-  - **data** `bytes` push data
-- Response
-  - **error** `uint32` error code, `0` is normal
-  - **msg** `string` error feedback
+- **DELETE** `/transfer`
+
+```http
+DELETE /transfer?id=debug HTTP/1.1
+Host: localhost:8080
+```
+
+## Push (Body) returns (google.protobuf.Empty)
+
+Push content to transfer
+
+### RPC
+
+- **Body**
+  - **id** `string` transfer id
+  - **content** `bytes` push content
 
 ```golang
 client := pb.NewRouterClient(conn)
-response, err := client.Push(context.Background(), &pb.PushParameter{
-  Identity: "task",
-  Data:     []byte(`{"name":"kain"}`),
+response, err := client.Push(context.Background(), &pb.Body{
+  Id:      "debug",
+  Content: []byte(`{"name":"kain"}`),
 })
+```
+
+### API Gateway
+
+- **POST** `/push`
+
+```http
+POST /push HTTP/1.1
+Host: localhost:8080
+Content-Type: application/json
+
+{
+    "id": "debug",
+    "content": "eyJuYW1lIjoiYXBpIn0="
+}
 ```
