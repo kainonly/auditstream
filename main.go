@@ -12,8 +12,9 @@ func main() {
 		fx.Provide(
 			bootstrap.LoadConfiguration,
 			bootstrap.InitializeSchema,
-			bootstrap.InitializeQueue,
 			bootstrap.InitializeElastic,
+			bootstrap.InitializeQueue,
+			bootstrap.InitializeTransfer,
 		),
 		fx.Invoke(application.Application),
 	).Run()

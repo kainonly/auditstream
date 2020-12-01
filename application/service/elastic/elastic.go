@@ -1,56 +1,28 @@
 package elastic
 
 import (
-	"elastic-transfer/application/service/elastic/utils"
-	"elastic-transfer/application/service/queue"
-	"elastic-transfer/application/service/schema"
-	"elastic-transfer/config"
-	"elastic-transfer/config/options"
+	"bytes"
 	"errors"
 	"github.com/elastic/go-elasticsearch/v8"
-	"go.uber.org/fx"
+	"github.com/elastic/go-elasticsearch/v8/esapi"
 )
 
 type Elastic struct {
 	Client *elasticsearch.Client
-	Pipes  *utils.PipeMap
-	*Dependency
 }
 
-type Dependency struct {
-	fx.In
-
-	Config *config.Config
-	Schema *schema.Schema
-	Queue  *queue.Queue
-}
-
-var (
-	NotExists = errors.New("this identity does not exists")
-)
-
-func New(dep *Dependency) (es *Elastic, err error) {
-	es = new(Elastic)
-	es.Dependency = dep
-	if es.Client, err = elasticsearch.NewClient(dep.Config.Elastic); err != nil {
+func (c *Elastic) Push(index string, data []byte) (err error) {
+	var res *esapi.Response
+	res, err = c.Client.Index(
+		index,
+		bytes.NewBuffer(data),
+	)
+	if err != nil {
 		return
 	}
-	es.Pipes = utils.NewPipeMap()
-	var pipesOptions []options.PipeOption
-	if pipesOptions, err = dep.Schema.Lists(); err != nil {
-		return
-	}
-	for _, option := range pipesOptions {
-		if err = es.Put(option); err != nil {
-			return
-		}
+	defer res.Body.Close()
+	if res.IsError() {
+		return errors.New(res.Status())
 	}
 	return
-}
-
-func (c *Elastic) GetPipe(identity string) (*options.PipeOption, error) {
-	if c.Pipes.Empty(identity) {
-		return nil, NotExists
-	}
-	return c.Pipes.Get(identity), nil
 }

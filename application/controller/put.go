@@ -8,7 +8,7 @@ import (
 )
 
 func (c *controller) Put(_ context.Context, Data *pb.Data) (_ *empty.Empty, err error) {
-	if err = c.ES.Put(options.PipeOption{
+	if err = c.Transfer.Put(options.PipeOption{
 		Identity: Data.Id,
 		Index:    Data.Index,
 		Validate: Data.Validate,

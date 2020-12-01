@@ -1,8 +1,8 @@
-package elastic
+package transfer
 
 import "elastic-transfer/config/options"
 
-func (c *Elastic) Put(option options.PipeOption) (err error) {
+func (c *Transfer) Put(option options.PipeOption) (err error) {
 	c.Pipes.Put(option.Identity, &option)
 	return c.Schema.Update(option)
 }

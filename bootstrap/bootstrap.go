@@ -7,9 +7,11 @@ import (
 	"elastic-transfer/application/service/queue"
 	"elastic-transfer/application/service/queue/drive"
 	"elastic-transfer/application/service/schema"
+	"elastic-transfer/application/service/transfer"
 	"elastic-transfer/config"
 	"errors"
 	"flag"
+	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/gin-gonic/gin"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"google.golang.org/grpc"
@@ -52,8 +54,12 @@ func InitializeSchema() *schema.Schema {
 // Initialize elasticsearch settings
 // reference config.example.yml
 // https://github.com/elastic/go-elasticsearch
-func InitializeElastic(dep elastic.Dependency) (es *elastic.Elastic, err error) {
-	return elastic.New(&dep)
+func InitializeElastic(cfg *config.Config) (es *elastic.Elastic, err error) {
+	es = new(elastic.Elastic)
+	if es.Client, err = elasticsearch.NewClient(cfg.Elastic); err != nil {
+		return
+	}
+	return
 }
 
 // Initialize message queue settings
@@ -76,6 +82,11 @@ func InitializeQueue(cfg *config.Config) (mq *queue.Queue, err error) {
 		break
 	}
 	return
+}
+
+// Initialize transfer management service
+func InitializeTransfer(dep transfer.Dependency) (*transfer.Transfer, error) {
+	return transfer.New(&dep)
 }
 
 // Set up api gateway for grpc

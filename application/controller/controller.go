@@ -19,7 +19,7 @@ func New(dep *common.Dependency) *controller {
 
 func (c *controller) find(identity string) (_ *pb.Data, err error) {
 	var pipe *options.PipeOption
-	if pipe, err = c.ES.GetPipe(identity); err != nil {
+	if pipe, err = c.Transfer.GetPipe(identity); err != nil {
 		return
 	}
 	return &pb.Data{

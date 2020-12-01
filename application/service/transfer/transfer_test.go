@@ -1,4 +1,4 @@
-package elastic
+package transfer
 
 import (
 	"elastic-transfer/application/service/schema"

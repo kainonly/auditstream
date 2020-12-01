@@ -1,6 +1,6 @@
-package elastic
+package transfer
 
-func (c *Elastic) Delete(identity string) (err error) {
+func (c *Transfer) Delete(identity string) (err error) {
 	if c.Pipes.Empty(identity) {
 		return
 	}
