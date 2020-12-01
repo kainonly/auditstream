@@ -47,3 +47,10 @@ func New(dep *Dependency) (es *Elastic, err error) {
 	}
 	return
 }
+
+func (c *Elastic) GetPipe(identity string) (*options.PipeOption, error) {
+	if c.Pipes.Empty(identity) {
+		return nil, NotExists
+	}
+	return c.Pipes.Get(identity), nil
+}
