@@ -137,7 +137,7 @@ Get transfer configuration
 
 
 ```golang
-client := pb.NewRouterClient(conn)
+client := pb.NewAPIClient(conn)
 response, err := client.Get(context.Background(), &pb.ID{
 		Id: "debug",
 })
@@ -169,7 +169,7 @@ Lists transfer configuration
     - **key** `string` The queue name of the message queue
 
 ```golang
-client := pb.NewRouterClient(conn)
+client := pb.NewAPIClient(conn)
 response, err := client.Lists(context.Background(), &pb.IDs{
   Ids: []string{"debug"},
 })
@@ -199,7 +199,7 @@ Get all transfer configuration identifiers
   - **ids** `[]string` transfer id
 
 ```golang
-client := pb.NewRouterClient(conn)
+client := pb.NewAPIClient(conn)
 response, err := client.All(context.Background(), &empty.Empty{})
 ```
 
@@ -226,7 +226,7 @@ Put transfer configuration
   - **key** `string` The queue name of the message queue
 
 ```golang
-client := pb.NewRouterClient(conn)
+client := pb.NewAPIClient(conn)
 response, err := client.Put(context.Background(), &pb.Data{
   Id:       "debug",
   Index:    "debug-logs-alpha",
@@ -264,7 +264,7 @@ Remove transfer configuration
   - **id** `string` transfer id
 
 ```golang
-client := pb.NewRouterClient(conn)
+client := pb.NewAPIClient(conn)
 response, err := client.Delete(context.Background(), &pb.ID{
   Id: "debug",
 })
@@ -290,7 +290,7 @@ Push content to transfer
   - **content** `bytes` push content
 
 ```golang
-client := pb.NewRouterClient(conn)
+client := pb.NewAPIClient(conn)
 response, err := client.Push(context.Background(), &pb.Body{
   Id:      "debug",
   Content: []byte(`{"name":"kain"}`),
