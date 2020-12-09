@@ -145,7 +145,7 @@ response, err := client.Get(context.Background(), &pb.ID{
 
 ### API Gateway
 
-- **PUT** `/client`
+- **GET** `/transfer`
 
 ```http
 GET /transfer?id=debug HTTP/1.1
