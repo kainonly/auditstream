@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/smallnest/rpcx/server"
-	"github.com/weplanx/log-transfer/api"
+	"github.com/weplanx/transfer/api"
 )
 
 func main() {

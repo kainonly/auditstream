@@ -1,4 +1,4 @@
-module github.com/weplanx/log-transfer
+module github.com/weplanx/transfer
 
 go 1.17
 

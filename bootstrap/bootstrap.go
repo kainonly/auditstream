@@ -2,7 +2,7 @@ package bootstrap
 
 import (
 	"errors"
-	"github.com/weplanx/log-transfer/common"
+	"github.com/weplanx/transfer/common"
 	"gopkg.in/yaml.v3"
 	"io/ioutil"
 	"os"
