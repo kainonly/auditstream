@@ -9,7 +9,6 @@ import (
 	"github.com/thoas/go-funk"
 	"github.com/weplanx/transfer/common"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -43,6 +42,7 @@ func (x *API) Logger(ctx context.Context, _ *empty.Empty) (rep *LoggerReply, err
 	if cursor, err = x.Db.Collection(x.CollName()).Find(ctx, bson.M{}); err != nil {
 		return
 	}
+	rep = new(LoggerReply)
 	if err = cursor.All(ctx, &rep.Data); err != nil {
 		return
 	}
@@ -53,15 +53,14 @@ func (x *API) Logger(ctx context.Context, _ *empty.Empty) (rep *LoggerReply, err
 func (x *API) CreateLogger(ctx context.Context, req *CreateLoggerRequest) (_ *empty.Empty, err error) {
 	key := uuid.New().String()
 	if _, err = x.Db.Collection(x.CollName()).
-		InsertOne(ctx, Logger{
-			Key:         key,
-			Topic:       req.Topic,
-			Description: req.Description,
+		InsertOne(ctx, bson.M{
+			"key":         key,
+			"topic":       req.Topic,
+			"description": req.Description,
 		}); err != nil {
 		return
 	}
 	subject := fmt.Sprintf(`%s.%s`, x.Values.Namespace, req.Topic)
-
 	if _, err = x.Js.AddStream(&nats.StreamConfig{
 		Name:        key,
 		Subjects:    []string{subject},
@@ -70,28 +69,26 @@ func (x *API) CreateLogger(ctx context.Context, req *CreateLoggerRequest) (_ *em
 	}); err != nil {
 		return
 	}
-	return
+
+	return &empty.Empty{}, nil
 }
 
 // DeleteLogger 删除日志主题
 func (x *API) DeleteLogger(ctx context.Context, req *DeleteLoggerRequest) (_ *empty.Empty, err error) {
 	var data Logger
-	var oid primitive.ObjectID
-	if oid, err = primitive.ObjectIDFromHex(req.Id); err != nil {
+	if err = x.Db.Collection(x.CollName()).
+		FindOne(ctx, bson.M{"key": req.Key}).Decode(&data); err != nil {
 		return
 	}
-	if err = x.Db.Collection(x.CollName()).
-		FindOne(ctx, bson.M{"_id": oid}).Decode(&data); err != nil {
+	if _, err = x.Db.Collection(x.CollName()).
+		DeleteOne(ctx, bson.M{"key": req.Key}); err != nil {
 		return
 	}
 	if err = x.Js.DeleteStream(data.Key); err != nil {
 		return
 	}
-	if _, err = x.Db.Collection(x.CollName()).
-		DeleteOne(ctx, bson.M{"_id": req.Id}); err != nil {
-		return
-	}
-	return
+
+	return &empty.Empty{}, nil
 }
 
 // Publish 投递日志
@@ -100,5 +97,6 @@ func (x *API) Publish(ctx context.Context, req *PublishRequest) (_ *empty.Empty,
 	if err = x.Nats.Publish(subject, req.Payload); err != nil {
 		return
 	}
-	return
+
+	return &empty.Empty{}, nil
 }
