@@ -7,6 +7,7 @@ import (
 
 type Inject struct {
 	Values *Values
+	Mongo  *mongo.Client
 	Db     *mongo.Database
 	Nats   *nats.Conn
 	Js     nats.JetStreamContext

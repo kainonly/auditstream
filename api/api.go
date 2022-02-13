@@ -10,6 +10,9 @@ import (
 	"github.com/weplanx/transfer/common"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/mongo/writeconcern"
+	"time"
 )
 
 type API struct {
@@ -52,42 +55,51 @@ func (x *API) Logger(ctx context.Context, _ *empty.Empty) (rep *LoggerReply, err
 // CreateLogger 创建日志主题
 func (x *API) CreateLogger(ctx context.Context, req *CreateLoggerRequest) (_ *empty.Empty, err error) {
 	key := uuid.New().String()
-	if _, err = x.Db.Collection(x.CollName()).
-		InsertOne(ctx, bson.M{
-			"key":         key,
-			"topic":       req.Topic,
-			"description": req.Description,
-		}); err != nil {
+	var session mongo.Session
+	if session, err = x.Mongo.StartSession(); err != nil {
 		return
 	}
-	subject := fmt.Sprintf(`%s.%s`, x.Values.Namespace, req.Topic)
-	if _, err = x.Js.AddStream(&nats.StreamConfig{
-		Name:        key,
-		Subjects:    []string{subject},
-		Description: req.Description,
-		Retention:   nats.WorkQueuePolicy,
-	}); err != nil {
+	defer session.EndSession(ctx)
+	if _, err = session.WithTransaction(ctx,
+		func(sessCtx mongo.SessionContext) (_ interface{}, err error) {
+			wcMajority := writeconcern.New(writeconcern.WMajority(), writeconcern.WTimeout(time.Second))
+			wcMajorityCollectionOpts := options.Collection().SetWriteConcern(wcMajority)
+			if _, err = x.Db.Collection(x.CollName(), wcMajorityCollectionOpts).
+				InsertOne(sessCtx, bson.M{
+					"key":         key,
+					"topic":       req.Topic,
+					"description": req.Description,
+				}); err != nil {
+				return
+			}
+			subject := fmt.Sprintf(`%s.%s`, x.Values.Namespace, req.Topic)
+			if _, err = x.Js.AddStream(&nats.StreamConfig{
+				Name:        key,
+				Subjects:    []string{subject},
+				Description: req.Description,
+				Retention:   nats.WorkQueuePolicy,
+			}); err != nil {
+				return
+			}
+			return
+		},
+	); err != nil {
 		return
 	}
-
 	return &empty.Empty{}, nil
 }
 
 // DeleteLogger 删除日志主题
 func (x *API) DeleteLogger(ctx context.Context, req *DeleteLoggerRequest) (_ *empty.Empty, err error) {
-	var data Logger
-	if err = x.Db.Collection(x.CollName()).
-		FindOne(ctx, bson.M{"key": req.Key}).Decode(&data); err != nil {
-		return
-	}
 	if _, err = x.Db.Collection(x.CollName()).
 		DeleteOne(ctx, bson.M{"key": req.Key}); err != nil {
 		return
 	}
-	if err = x.Js.DeleteStream(data.Key); err != nil {
-		return
+	if x.ExistsStream(req.Key) {
+		if err = x.Js.DeleteStream(req.Key); err != nil {
+			return
+		}
 	}
-
 	return &empty.Empty{}, nil
 }
 

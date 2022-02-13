@@ -19,7 +19,7 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic(err)
 	}
-	var addr string
+	var host string
 	var opts []grpc.DialOption
 	if v.TLS.Cert != "" {
 		creds, err := credentials.NewClientTLSFromFile(v.TLS.Cert, "")
@@ -27,13 +27,13 @@ func TestMain(m *testing.M) {
 			panic(err)
 		}
 		opts = append(opts, grpc.WithTransportCredentials(creds))
-		addr = fmt.Sprintf(`x.kainonly.com%s`, v.Address)
+		host = "x.kainonly.com"
 	} else {
 		opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
-		addr = fmt.Sprintf(`127.0.0.1%s`, v.Address)
+		host = "127.0.0.1"
 	}
 
-	if x, err = New(addr, opts...); err != nil {
+	if x, err = New(fmt.Sprintf(`%s%s`, host, v.Address), opts...); err != nil {
 		panic(err)
 	}
 	os.Exit(m.Run())
@@ -61,7 +61,7 @@ func TestTransfer_Logger(t *testing.T) {
 func TestTransfer_DeleteLogger(t *testing.T) {
 	defer x.Close()
 	if err := x.DeleteLogger(context.TODO(),
-		"f4d165c2-1155-49e6-afb2-b2992d7c6bd3",
+		"312a2fc1-b758-454a-92ef-9c0bf6324fda",
 	); err != nil {
 		t.Error(err)
 	}

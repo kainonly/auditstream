@@ -31,6 +31,7 @@ func App(value *common.Values) (*grpc.Server, error) {
 	}
 	inject := &common.Inject{
 		Values: value,
+		Mongo:  client,
 		Db:     database,
 		Nats:   conn,
 		Js:     jetStreamContext,
