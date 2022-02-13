@@ -11,5 +11,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	app.Serve("tcp", values.Address)
+	if err = app.Serve("quic", values.Address); err != nil {
+		panic(err)
+	}
 }

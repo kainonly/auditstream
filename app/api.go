@@ -26,7 +26,7 @@ func (x *API) name() string {
 }
 
 type LoggerReply struct {
-	Data []Logger
+	Data []map[string]interface{}
 }
 
 func (x *API) Logger(ctx context.Context, _ *Empty, rep *LoggerReply) (err error) {
@@ -34,11 +34,12 @@ func (x *API) Logger(ctx context.Context, _ *Empty, rep *LoggerReply) (err error
 	if cursor, err = x.Db.Collection(x.name()).Find(ctx, bson.M{}); err != nil {
 		return
 	}
-	rep.Data = make([]Logger, 0)
-	if err = cursor.All(ctx, &rep.Data); err != nil {
+	data := make([]map[string]interface{}, 0)
+	if err = cursor.All(ctx, &data); err != nil {
 		return
 	}
-	return nil
+	rep = &LoggerReply{Data: data}
+	return
 }
 
 type CreateLoggerRequest struct {
