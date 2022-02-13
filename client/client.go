@@ -25,26 +25,12 @@ func (x *Transfer) Close() error {
 	return x.conn.Close()
 }
 
-type LoggerInfo struct {
-	Key         string
-	Topic       string
-	Description string
-}
-
-func (x *Transfer) Logger(ctx context.Context) (result []LoggerInfo, err error) {
-	var rep *api.LoggerReply
-	if rep, err = x.client.Logger(ctx, &empty.Empty{}); err != nil {
+func (x *Transfer) GetLoggers(ctx context.Context) (result []*api.Logger, err error) {
+	var rep *api.GetLoggersReply
+	if rep, err = x.client.GetLoggers(ctx, &empty.Empty{}); err != nil {
 		return
 	}
-	result = make([]LoggerInfo, len(rep.GetData()))
-	for i, v := range rep.GetData() {
-		result[i] = LoggerInfo{
-			Key:         v.Key,
-			Topic:       v.Topic,
-			Description: v.Description,
-		}
-	}
-	return
+	return rep.GetData(), nil
 }
 
 func (x *Transfer) CreateLogger(ctx context.Context, topic string, description string) (err error) {
@@ -58,11 +44,27 @@ func (x *Transfer) CreateLogger(ctx context.Context, topic string, description s
 	return
 }
 
+func (x *Transfer) UpdateLogger(ctx context.Context, key string, topic string, description string) (err error) {
+	if _, err = x.client.UpdateLogger(ctx,
+		&api.UpdateLoggerRequest{
+			Key:         key,
+			Topic:       topic,
+			Description: description,
+		}); err != nil {
+		return
+	}
+	return
+}
+
 func (x *Transfer) DeleteLogger(ctx context.Context, key string) (err error) {
 	if _, err = x.client.DeleteLogger(ctx, &api.DeleteLoggerRequest{Key: key}); err != nil {
 		return
 	}
 	return
+}
+
+func (x *Transfer) Info(ctx context.Context, key string) (*api.InfoReply, error) {
+	return x.client.Info(ctx, &api.InfoRequest{Key: key})
 }
 
 func (x *Transfer) Publish(ctx context.Context, topic string, payload []byte) (err error) {

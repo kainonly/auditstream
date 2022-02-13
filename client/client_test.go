@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"github.com/weplanx/transfer/bootstrap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -40,18 +41,37 @@ func TestMain(m *testing.M) {
 }
 
 func TestTransfer_CreateLogger(t *testing.T) {
-	defer x.Close()
 	if err := x.CreateLogger(context.TODO(),
 		"beta",
-		"Transfer 测试",
+		"Transfer 新增",
 	); err != nil {
 		t.Error(err)
 	}
 }
 
-func TestTransfer_Logger(t *testing.T) {
-	defer x.Close()
-	result, err := x.Logger(context.TODO())
+var key string
+
+func TestTransfer_GetLoggers(t *testing.T) {
+	result, err := x.GetLoggers(context.TODO())
+	if err != nil {
+		t.Error(err)
+	}
+	assert.Len(t, result, 1)
+	t.Log(result)
+	key = result[0].Key
+}
+
+func TestTransfer_UpdateLogger(t *testing.T) {
+	if err := x.UpdateLogger(context.TODO(), key,
+		"beta1",
+		"Transfer 修改",
+	); err != nil {
+		t.Error(err)
+	}
+}
+
+func TestTransfer_Info(t *testing.T) {
+	result, err := x.Info(context.TODO(), key)
 	if err != nil {
 		t.Error(err)
 	}
@@ -59,10 +79,7 @@ func TestTransfer_Logger(t *testing.T) {
 }
 
 func TestTransfer_DeleteLogger(t *testing.T) {
-	defer x.Close()
-	if err := x.DeleteLogger(context.TODO(),
-		"312a2fc1-b758-454a-92ef-9c0bf6324fda",
-	); err != nil {
+	if err := x.DeleteLogger(context.TODO(), key); err != nil {
 		t.Error(err)
 	}
 }

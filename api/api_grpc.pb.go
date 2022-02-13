@@ -23,9 +23,11 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type APIClient interface {
-	Logger(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*LoggerReply, error)
+	GetLoggers(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GetLoggersReply, error)
 	CreateLogger(ctx context.Context, in *CreateLoggerRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	UpdateLogger(ctx context.Context, in *UpdateLoggerRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	DeleteLogger(ctx context.Context, in *DeleteLoggerRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	Info(ctx context.Context, in *InfoRequest, opts ...grpc.CallOption) (*InfoReply, error)
 	Publish(ctx context.Context, in *PublishRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
@@ -37,9 +39,9 @@ func NewAPIClient(cc grpc.ClientConnInterface) APIClient {
 	return &aPIClient{cc}
 }
 
-func (c *aPIClient) Logger(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*LoggerReply, error) {
-	out := new(LoggerReply)
-	err := c.cc.Invoke(ctx, "/transfer.API/Logger", in, out, opts...)
+func (c *aPIClient) GetLoggers(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GetLoggersReply, error) {
+	out := new(GetLoggersReply)
+	err := c.cc.Invoke(ctx, "/transfer.API/GetLoggers", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -55,9 +57,27 @@ func (c *aPIClient) CreateLogger(ctx context.Context, in *CreateLoggerRequest, o
 	return out, nil
 }
 
+func (c *aPIClient) UpdateLogger(ctx context.Context, in *UpdateLoggerRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/transfer.API/UpdateLogger", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *aPIClient) DeleteLogger(ctx context.Context, in *DeleteLoggerRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, "/transfer.API/DeleteLogger", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *aPIClient) Info(ctx context.Context, in *InfoRequest, opts ...grpc.CallOption) (*InfoReply, error) {
+	out := new(InfoReply)
+	err := c.cc.Invoke(ctx, "/transfer.API/Info", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -77,9 +97,11 @@ func (c *aPIClient) Publish(ctx context.Context, in *PublishRequest, opts ...grp
 // All implementations must embed UnimplementedAPIServer
 // for forward compatibility
 type APIServer interface {
-	Logger(context.Context, *emptypb.Empty) (*LoggerReply, error)
+	GetLoggers(context.Context, *emptypb.Empty) (*GetLoggersReply, error)
 	CreateLogger(context.Context, *CreateLoggerRequest) (*emptypb.Empty, error)
+	UpdateLogger(context.Context, *UpdateLoggerRequest) (*emptypb.Empty, error)
 	DeleteLogger(context.Context, *DeleteLoggerRequest) (*emptypb.Empty, error)
+	Info(context.Context, *InfoRequest) (*InfoReply, error)
 	Publish(context.Context, *PublishRequest) (*emptypb.Empty, error)
 	mustEmbedUnimplementedAPIServer()
 }
@@ -88,14 +110,20 @@ type APIServer interface {
 type UnimplementedAPIServer struct {
 }
 
-func (UnimplementedAPIServer) Logger(context.Context, *emptypb.Empty) (*LoggerReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Logger not implemented")
+func (UnimplementedAPIServer) GetLoggers(context.Context, *emptypb.Empty) (*GetLoggersReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetLoggers not implemented")
 }
 func (UnimplementedAPIServer) CreateLogger(context.Context, *CreateLoggerRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateLogger not implemented")
 }
+func (UnimplementedAPIServer) UpdateLogger(context.Context, *UpdateLoggerRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateLogger not implemented")
+}
 func (UnimplementedAPIServer) DeleteLogger(context.Context, *DeleteLoggerRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteLogger not implemented")
+}
+func (UnimplementedAPIServer) Info(context.Context, *InfoRequest) (*InfoReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Info not implemented")
 }
 func (UnimplementedAPIServer) Publish(context.Context, *PublishRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Publish not implemented")
@@ -113,20 +141,20 @@ func RegisterAPIServer(s grpc.ServiceRegistrar, srv APIServer) {
 	s.RegisterService(&API_ServiceDesc, srv)
 }
 
-func _API_Logger_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _API_GetLoggers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(emptypb.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(APIServer).Logger(ctx, in)
+		return srv.(APIServer).GetLoggers(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/transfer.API/Logger",
+		FullMethod: "/transfer.API/GetLoggers",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(APIServer).Logger(ctx, req.(*emptypb.Empty))
+		return srv.(APIServer).GetLoggers(ctx, req.(*emptypb.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -149,6 +177,24 @@ func _API_CreateLogger_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
+func _API_UpdateLogger_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateLoggerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(APIServer).UpdateLogger(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/transfer.API/UpdateLogger",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(APIServer).UpdateLogger(ctx, req.(*UpdateLoggerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _API_DeleteLogger_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(DeleteLoggerRequest)
 	if err := dec(in); err != nil {
@@ -163,6 +209,24 @@ func _API_DeleteLogger_Handler(srv interface{}, ctx context.Context, dec func(in
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(APIServer).DeleteLogger(ctx, req.(*DeleteLoggerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _API_Info_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(InfoRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(APIServer).Info(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/transfer.API/Info",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(APIServer).Info(ctx, req.(*InfoRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -193,16 +257,24 @@ var API_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*APIServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "Logger",
-			Handler:    _API_Logger_Handler,
+			MethodName: "GetLoggers",
+			Handler:    _API_GetLoggers_Handler,
 		},
 		{
 			MethodName: "CreateLogger",
 			Handler:    _API_CreateLogger_Handler,
 		},
 		{
+			MethodName: "UpdateLogger",
+			Handler:    _API_UpdateLogger_Handler,
+		},
+		{
 			MethodName: "DeleteLogger",
 			Handler:    _API_DeleteLogger_Handler,
+		},
+		{
+			MethodName: "Info",
+			Handler:    _API_Info_Handler,
 		},
 		{
 			MethodName: "Publish",
