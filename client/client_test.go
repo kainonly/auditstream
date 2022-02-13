@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/weplanx/transfer/app"
 	"github.com/weplanx/transfer/bootstrap"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"os"
 	"testing"
 )
@@ -25,6 +26,18 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
+func TestTransfer_CreateLogger(t *testing.T) {
+	defer x.Close()
+	if err := x.CreateLogger(app.CreateLoggerRequest{
+		Topic:       "beta",
+		Description: "Transfer 测试",
+	}); err != nil {
+		t.Error(err)
+	}
+}
+
+var data []app.Logger
+
 func TestTransfer_Logger(t *testing.T) {
 	defer x.Close()
 	result, err := x.Logger()
@@ -32,19 +45,16 @@ func TestTransfer_Logger(t *testing.T) {
 		t.Error(err)
 	}
 	t.Log(result)
-}
-
-func TestTransfer_CreateLogger(t *testing.T) {
-	defer x.Close()
-	if err := x.CreateLogger(app.CreateLoggerRequest{
-		Topic:       "beta",
-		Description: "测试",
-	}); err != nil {
-		t.Error(err)
-	}
+	data = result.Data
 }
 
 func TestTransfer_DeleteLogger(t *testing.T) {
 	defer x.Close()
-	//if err:=x.DeleteLogger(app.DeleteLoggerRequest{Id: t})
+	oid, err := primitive.ObjectIDFromHex("6208a3e8e040dbe22fa306e4")
+	if err != nil {
+		t.Error(err)
+	}
+	if err = x.DeleteLogger(app.DeleteLoggerRequest{Id: oid}); err != nil {
+		t.Error(err)
+	}
 }

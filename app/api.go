@@ -26,19 +26,18 @@ func (x *API) name() string {
 }
 
 type LoggerReply struct {
-	Data []map[string]interface{}
+	Data []Logger
 }
 
-func (x *API) Logger(ctx context.Context, _ *Empty, rep *LoggerReply) (err error) {
+func (x *API) Logger(ctx context.Context, req *Empty, rep *LoggerReply) (err error) {
 	var cursor *mongo.Cursor
 	if cursor, err = x.Db.Collection(x.name()).Find(ctx, bson.M{}); err != nil {
 		return
 	}
-	data := make([]map[string]interface{}, 0)
-	if err = cursor.All(ctx, &data); err != nil {
+	rep.Data = make([]Logger, 0)
+	if err = cursor.All(ctx, &rep.Data); err != nil {
 		return
 	}
-	rep = &LoggerReply{Data: data}
 	return
 }
 

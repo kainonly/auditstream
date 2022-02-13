@@ -50,6 +50,7 @@ func (x *Transfer) Close() error {
 }
 
 func (x *Transfer) Logger() (reply *app.LoggerReply, err error) {
+	reply = new(app.LoggerReply)
 	if err = x.Client.Call(
 		context.Background(),
 		"Logger",

@@ -64,7 +64,7 @@ func New(
 }
 
 type Logger struct {
-	ID          primitive.ObjectID `bson:"_id"`
+	ID          primitive.ObjectID `bson:"_id,omitempty"`
 	Key         string             `bson:"key"`
 	Topic       string             `bson:"topic"`
 	Description string             `bson:"description"`
