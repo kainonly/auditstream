@@ -50,7 +50,7 @@ func TestTransfer_Logger(t *testing.T) {
 
 func TestTransfer_DeleteLogger(t *testing.T) {
 	defer x.Close()
-	oid, err := primitive.ObjectIDFromHex("6208a3e8e040dbe22fa306e4")
+	oid, err := primitive.ObjectIDFromHex("6208b5dd6cd5114a431e0495")
 	if err != nil {
 		t.Error(err)
 	}
