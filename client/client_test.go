@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/weplanx/transfer/bootstrap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"os"
 	"testing"
@@ -18,10 +19,21 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic(err)
 	}
-	if x, err = New(
-		fmt.Sprintf(`127.0.0.1%s`, v.Address),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	); err != nil {
+	var addr string
+	var opts []grpc.DialOption
+	if v.TLS.Cert != "" {
+		creds, err := credentials.NewClientTLSFromFile(v.TLS.Cert, "")
+		if err != nil {
+			panic(err)
+		}
+		opts = append(opts, grpc.WithTransportCredentials(creds))
+		addr = fmt.Sprintf(`x.kainonly.com%s`, v.Address)
+	} else {
+		opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		addr = fmt.Sprintf(`127.0.0.1%s`, v.Address)
+	}
+
+	if x, err = New(addr, opts...); err != nil {
 		panic(err)
 	}
 	os.Exit(m.Run())

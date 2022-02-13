@@ -25,3 +25,4 @@
 config-map.yml
 config.yml
 deployment.yml
+config/ssl

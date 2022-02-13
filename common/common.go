@@ -14,9 +14,15 @@ type Inject struct {
 
 type Values struct {
 	Address   string   `yaml:"address"`
+	TLS       TLS      `yaml:"tls"`
 	Namespace string   `yaml:"namespace"`
 	Database  Database `yaml:"database"`
 	Nats      Nats     `yaml:"nats"`
+}
+
+type TLS struct {
+	Cert string `yaml:"cert"`
+	Key  string `yaml:"key"`
 }
 
 type Database struct {
