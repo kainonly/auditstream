@@ -5,16 +5,17 @@ package main
 
 import (
 	"github.com/google/wire"
-	"github.com/smallnest/rpcx/server"
-	"github.com/weplanx/transfer/app"
+	"github.com/weplanx/transfer/api"
 	"github.com/weplanx/transfer/bootstrap"
 	"github.com/weplanx/transfer/common"
+	"google.golang.org/grpc"
 )
 
-func App(value *common.Values) (*server.Server, error) {
+func App(value *common.Values) (*grpc.Server, error) {
 	wire.Build(
+		wire.Struct(new(common.Inject), "*"),
 		bootstrap.Provides,
-		app.Provides,
+		api.Provides,
 	)
-	return &server.Server{}, nil
+	return &grpc.Server{}, nil
 }

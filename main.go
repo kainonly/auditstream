@@ -1,17 +1,22 @@
 package main
 
-import "github.com/weplanx/transfer/bootstrap"
+import (
+	"github.com/weplanx/transfer/bootstrap"
+	"net"
+)
 
 func main() {
-	values, err := bootstrap.SetValues()
+	v, err := bootstrap.SetValues()
 	if err != nil {
 		panic(err)
 	}
-	app, err := App(values)
+	lis, err := net.Listen("tcp", v.Address)
 	if err != nil {
 		panic(err)
 	}
-	if err = app.Serve("quic", values.Address); err != nil {
+	app, err := App(v)
+	if err != nil {
 		panic(err)
 	}
+	app.Serve(lis)
 }

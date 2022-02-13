@@ -7,15 +7,15 @@
 package main
 
 import (
-	"github.com/smallnest/rpcx/server"
-	"github.com/weplanx/transfer/app"
+	"github.com/weplanx/transfer/api"
 	"github.com/weplanx/transfer/bootstrap"
 	"github.com/weplanx/transfer/common"
+	"google.golang.org/grpc"
 )
 
 // Injectors from wire.go:
 
-func App(value *common.Values) (*server.Server, error) {
+func App(value *common.Values) (*grpc.Server, error) {
 	client, err := bootstrap.UseMongoDB(value)
 	if err != nil {
 		return nil, err
@@ -29,15 +29,15 @@ func App(value *common.Values) (*server.Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	api := &app.API{
+	inject := &common.Inject{
 		Values: value,
 		Db:     database,
 		Nats:   conn,
 		Js:     jetStreamContext,
 	}
-	serverServer, err := app.New(value, database, api)
+	server, err := api.New(inject)
 	if err != nil {
 		return nil, err
 	}
-	return serverServer, nil
+	return server, nil
 }

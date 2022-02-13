@@ -1,8 +1,9 @@
-package app
+package api
 
 import (
 	"context"
 	"fmt"
+	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/google/uuid"
 	"github.com/nats-io/nats.go"
 	"github.com/thoas/go-funk"
@@ -13,10 +14,8 @@ import (
 )
 
 type API struct {
-	Values *common.Values
-	Db     *mongo.Database
-	Nats   *nats.Conn
-	Js     nats.JetStreamContext
+	UnimplementedAPIServer
+	*common.Inject
 }
 
 // CollName 集合名称
@@ -38,30 +37,20 @@ func (x *API) ExistsStream(name string) bool {
 	return funk.Contains(names, name)
 }
 
-type LoggerReply struct {
-	Data []Logger
-}
-
 // Logger 获取日志主题设置
-func (x *API) Logger(ctx context.Context, req *Empty, rep *LoggerReply) (err error) {
+func (x *API) Logger(ctx context.Context, _ *empty.Empty) (rep *LoggerReply, err error) {
 	var cursor *mongo.Cursor
 	if cursor, err = x.Db.Collection(x.CollName()).Find(ctx, bson.M{}); err != nil {
 		return
 	}
-	rep.Data = make([]Logger, 0)
 	if err = cursor.All(ctx, &rep.Data); err != nil {
 		return
 	}
 	return
 }
 
-type CreateLoggerRequest struct {
-	Topic       string
-	Description string
-}
-
 // CreateLogger 创建日志主题
-func (x *API) CreateLogger(ctx context.Context, req *CreateLoggerRequest, _ *Empty) (err error) {
+func (x *API) CreateLogger(ctx context.Context, req *CreateLoggerRequest) (_ *empty.Empty, err error) {
 	key := uuid.New().String()
 	if _, err = x.Db.Collection(x.CollName()).
 		InsertOne(ctx, Logger{
@@ -84,15 +73,15 @@ func (x *API) CreateLogger(ctx context.Context, req *CreateLoggerRequest, _ *Emp
 	return
 }
 
-type DeleteLoggerRequest struct {
-	Id primitive.ObjectID
-}
-
 // DeleteLogger 删除日志主题
-func (x *API) DeleteLogger(ctx context.Context, req *DeleteLoggerRequest, _ *Empty) (err error) {
+func (x *API) DeleteLogger(ctx context.Context, req *DeleteLoggerRequest) (_ *empty.Empty, err error) {
 	var data Logger
+	var oid primitive.ObjectID
+	if oid, err = primitive.ObjectIDFromHex(req.Id); err != nil {
+		return
+	}
 	if err = x.Db.Collection(x.CollName()).
-		FindOne(ctx, bson.M{"_id": req.Id}).Decode(&data); err != nil {
+		FindOne(ctx, bson.M{"_id": oid}).Decode(&data); err != nil {
 		return
 	}
 	if err = x.Js.DeleteStream(data.Key); err != nil {
@@ -105,13 +94,11 @@ func (x *API) DeleteLogger(ctx context.Context, req *DeleteLoggerRequest, _ *Emp
 	return
 }
 
-type PublishRequest struct {
-	Topic   string
-	Payload []byte
-}
-
 // Publish 投递日志
-func (x *API) Publish(_ context.Context, req *PublishRequest, _ *Empty) error {
+func (x *API) Publish(ctx context.Context, req *PublishRequest) (_ *empty.Empty, err error) {
 	subject := fmt.Sprintf(`%s.%s`, x.Values.Namespace, req.Topic)
-	return x.Nats.Publish(subject, req.Payload)
+	if err = x.Nats.Publish(subject, req.Payload); err != nil {
+		return
+	}
+	return
 }
