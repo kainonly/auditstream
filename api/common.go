@@ -5,6 +5,7 @@ import (
 	"github.com/google/wire"
 	zlogging "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
+	"github.com/nats-io/nats.go"
 	"github.com/weplanx/transfer/common"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -19,6 +20,15 @@ var Provides = wire.NewSet(
 )
 
 func New(x *common.Inject) (s *grpc.Server, err error) {
+	// 初始化命名空间
+	if _, err = x.Js.AddStream(&nats.StreamConfig{
+		Name:     "namespaces",
+		Subjects: []string{"namespaces.>"},
+		MaxMsgs:  1,
+	}); err != nil {
+		return
+	}
+
 	// 存储索引
 	if _, err = x.Db.Collection(x.Values.Database.Collection).Indexes().
 		CreateMany(context.TODO(), []mongo.IndexModel{

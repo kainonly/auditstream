@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/nats-io/nats.go"
 	"github.com/thoas/go-funk"
+	"github.com/vmihailenco/msgpack/v5"
 	"github.com/weplanx/transfer/common"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -20,18 +21,17 @@ type API struct {
 	*common.Inject
 }
 
-// CollName 集合名称
-// 默认 logger
-func (x *API) CollName() string {
+// 集合名称，默认 logger
+func (x *API) name() string {
 	if x.Values.Database.Collection == "" {
 		return "logger"
 	}
 	return x.Values.Database.Collection
 }
 
-// ExistsStream 判断流命名是否存在
+// 判断流命名是否存在
 // 不能包含空格、制表符、句点 (.)、大于 (>) 或星号 (*)
-func (x *API) ExistsStream(name string) bool {
+func (x *API) existsStream(name string) bool {
 	var names []string
 	for x := range x.Js.StreamNames() {
 		names = append(names, x)
@@ -39,14 +39,43 @@ func (x *API) ExistsStream(name string) bool {
 	return funk.Contains(names, name)
 }
 
-// GetLoggers 获取日志主题设置
-func (x *API) GetLoggers(ctx context.Context, _ *empty.Empty) (rep *GetLoggersReply, err error) {
+// 获取日志主题
+func (x *API) loggers(ctx context.Context, v interface{}) (err error) {
 	var cursor *mongo.Cursor
-	if cursor, err = x.Db.Collection(x.CollName()).Find(ctx, bson.M{}); err != nil {
+	if cursor, err = x.Db.Collection(x.name()).Find(ctx, bson.M{}); err != nil {
 		return
 	}
+	if err = cursor.All(ctx, v); err != nil {
+		return
+	}
+	return
+}
+
+// 触发订阅变更事件
+func (x *API) changed(ctx context.Context) (err error) {
+	loggers := make([]map[string]interface{}, 0)
+	if err = x.loggers(ctx, &loggers); err != nil {
+		return
+	}
+	topics := make([]string, len(loggers))
+	for i, v := range loggers {
+		topics[i] = v["topic"].(string)
+	}
+	var data []byte
+	if data, err = msgpack.Marshal(topics); err != nil {
+		return
+	}
+	subject := fmt.Sprintf(`namespaces.%s`, x.Values.Namespace)
+	if _, err = x.Js.Publish(subject, data); err != nil {
+		return
+	}
+	return
+}
+
+// GetLoggers 获取日志主题设置
+func (x *API) GetLoggers(ctx context.Context, _ *empty.Empty) (rep *GetLoggersReply, err error) {
 	rep = new(GetLoggersReply)
-	if err = cursor.All(ctx, &rep.Data); err != nil {
+	if err = x.loggers(ctx, &rep.Data); err != nil {
 		return
 	}
 	return
@@ -64,7 +93,7 @@ func (x *API) CreateLogger(ctx context.Context, req *CreateLoggerRequest) (_ *em
 		func(sessCtx mongo.SessionContext) (_ interface{}, err error) {
 			wcMajority := writeconcern.New(writeconcern.WMajority(), writeconcern.WTimeout(time.Second))
 			wcMajorityCollectionOpts := options.Collection().SetWriteConcern(wcMajority)
-			if _, err = x.Db.Collection(x.CollName(), wcMajorityCollectionOpts).
+			if _, err = x.Db.Collection(x.name(), wcMajorityCollectionOpts).
 				InsertOne(sessCtx, bson.M{
 					"key":         key,
 					"topic":       req.Topic,
@@ -79,6 +108,9 @@ func (x *API) CreateLogger(ctx context.Context, req *CreateLoggerRequest) (_ *em
 				Description: req.Description,
 				Retention:   nats.WorkQueuePolicy,
 			}); err != nil {
+				return
+			}
+			if err = x.changed(sessCtx); err != nil {
 				return
 			}
 			return
@@ -100,7 +132,7 @@ func (x *API) UpdateLogger(ctx context.Context, req *UpdateLoggerRequest) (_ *em
 		func(sessCtx mongo.SessionContext) (_ interface{}, err error) {
 			wcMajority := writeconcern.New(writeconcern.WMajority(), writeconcern.WTimeout(time.Second))
 			wcMajorityCollectionOpts := options.Collection().SetWriteConcern(wcMajority)
-			if _, err = x.Db.Collection(x.CollName(), wcMajorityCollectionOpts).
+			if _, err = x.Db.Collection(x.name(), wcMajorityCollectionOpts).
 				UpdateOne(sessCtx, bson.M{"key": req.Key}, bson.M{
 					"$set": bson.M{
 						"topic":       req.Topic,
@@ -118,6 +150,9 @@ func (x *API) UpdateLogger(ctx context.Context, req *UpdateLoggerRequest) (_ *em
 			}); err != nil {
 				return
 			}
+			if err = x.changed(sessCtx); err != nil {
+				return
+			}
 			return
 		},
 	); err != nil {
@@ -128,12 +163,15 @@ func (x *API) UpdateLogger(ctx context.Context, req *UpdateLoggerRequest) (_ *em
 
 // DeleteLogger 删除日志主题
 func (x *API) DeleteLogger(ctx context.Context, req *DeleteLoggerRequest) (_ *empty.Empty, err error) {
-	if _, err = x.Db.Collection(x.CollName()).
+	if _, err = x.Db.Collection(x.name()).
 		DeleteOne(ctx, bson.M{"key": req.Key}); err != nil {
 		return
 	}
-	if x.ExistsStream(req.Key) {
+	if x.existsStream(req.Key) {
 		if err = x.Js.DeleteStream(req.Key); err != nil {
+			return
+		}
+		if err = x.changed(ctx); err != nil {
 			return
 		}
 	}
@@ -163,9 +201,8 @@ func (x *API) Info(ctx context.Context, req *InfoRequest) (rep *InfoReply, err e
 // Publish 投递日志
 func (x *API) Publish(ctx context.Context, req *PublishRequest) (_ *empty.Empty, err error) {
 	subject := fmt.Sprintf(`%s.%s`, x.Values.Namespace, req.Topic)
-	if err = x.Nats.Publish(subject, req.Payload); err != nil {
+	if _, err = x.Js.Publish(subject, req.Payload); err != nil {
 		return
 	}
-
 	return &empty.Empty{}, nil
 }
