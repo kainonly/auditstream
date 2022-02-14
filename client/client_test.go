@@ -49,7 +49,7 @@ func TestMain(m *testing.M) {
 
 func TestTransfer_CreateLogger(t *testing.T) {
 	if err := x.CreateLogger(context.TODO(),
-		"beta",
+		"sys",
 		"Transfer 新增",
 	); err != nil {
 		t.Error(err)
@@ -70,7 +70,7 @@ func TestTransfer_GetLoggers(t *testing.T) {
 
 func TestTransfer_UpdateLogger(t *testing.T) {
 	if err := x.UpdateLogger(context.TODO(), key,
-		"beta1",
+		"system",
 		"Transfer 修改",
 	); err != nil {
 		t.Error(err)
