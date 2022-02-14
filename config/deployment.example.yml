@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: transfer
+  name: transfer-deploy
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: transfer
+  template:
+    metadata:
+      labels:
+        app: transfer
+    spec:
+      containers:
+        - image: ccr.ccs.tencentyun.com/weplanx/transfer:latest
+          imagePullPolicy: Always
+          name: transfer
+          ports:
+            - containerPort: 6000
+          volumeMounts:
+            - name: config
+              mountPath: "/app/config"
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: transfer.cfg
+            items:
+              - key: "config.yml"
+                path: "config.yml"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: transfer-svc
+spec:
+  ports:
+    - port: 6000
+      protocol: TCP
+  selector:
+    app: transfer
