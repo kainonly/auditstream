@@ -1,0 +1,12 @@
+address: ":6000"
+tls: <TLS配置，非必须>
+  cert:
+  key:
+namespace: <命名空间>
+database:
+  uri: mongodb://<username>:<password>@<host>:<port>/<database>?authSource=<authSource>
+  name: <数据库名>
+  collection: <默认集合>
+nats:
+  hosts: [ ]
+  nkey:
