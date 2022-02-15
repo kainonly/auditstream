@@ -11,6 +11,8 @@
 
 > 需要注意的是 NATS 与 MongoDB 仅支持集群方式（原因是 NATS JetStream 至少需要3节点的最小集群，而为了配置的一致性 MongoDB 至少采用副本集方式）
 
+![Transfer & Collector](./topology.png)
+
 镜像源主要有：
 
 - ghcr.io/weplanx/transfer:latest
