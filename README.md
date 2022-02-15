@@ -12,6 +12,7 @@
 > 需要注意的是 NATS 与 MongoDB 仅支持集群方式（原因是 NATS JetStream 至少需要3节点的最小集群，而为了配置的一致性 MongoDB 至少采用副本集方式）
 
 ![Transfer & Collector](./topology.png)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fweplanx%2Ftransfer.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fweplanx%2Ftransfer?ref=badge_shield)
 
 镜像源主要有：
 
@@ -115,3 +116,5 @@ spec:
 ## License
 
 [BSD-3-Clause License](https://github.com/weplanx/transfer/blob/main/LICENSE)
+
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fweplanx%2Ftransfer.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fweplanx%2Ftransfer?ref=badge_large)
