@@ -1,18 +1,68 @@
 # Weplanx Transfer
 
+[![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/weplanx/transfer?style=flat-square)](https://github.com/weplanx/transfer)
+[![Go Report Card](https://goreportcard.com/badge/github.com/weplanx/transfer?style=flat-square)](https://goreportcard.com/report/github.com/weplanx/transfer)
+[![Release](https://img.shields.io/github/v/release/weplanx/transfer.svg?style=flat-square)](https://github.com/weplanx/transfer)
+[![GitHub license](https://img.shields.io/github/license/weplanx/transfer?style=flat-square)](https://raw.githubusercontent.com/weplanx/transfer/main/LICENSE)
+
 日志传输器，配合日志采集器将相应的消息管道数据传输至支援的日志系统中。
 
-> 项目继承于 [elastic-transfer](https://github.com/weplanx/log-transfer/tree/elastic-transfer) 延续开发
-> 新版本将以 `v*.*.*` 形式发布
+> 版本 `*.*.*` 为 [elastic-transfer](https://github.com/weplanx/log-transfer/tree/elastic-transfer) 已归档的分支项目
+> 请使用 `v*.*.*` 发布的版本
+
+## 客户端
+
+在 `go.mod` 项目中
+
+```shell
+go get github.com/weplanx/transfer
+```
+
+简单使用
+
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"github.com/weplanx/transfer/client"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+)
+
+func main() {
+	var opts []grpc.DialOption
+	opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
+
+	// 或者使用 TLS
+	// certFile := "..."
+	// creds, err := credentials.NewClientTLSFromFile(certFile, "")
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// opts = append(opts, grpc.WithTransportCredentials(creds))
+
+	transfer, err := client.New("127.0.0.1:6000", opts...)
+	if err != nil {
+		panic(err)
+	}
+	ctx := context.Background()
+	result, err := transfer.GetLoggers(ctx)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(result)
+}
+```
 
 ## 部署服务
 
 日志传输器采用更广泛 gRPC 进行服务通讯，通过 NATS JetStream 处理消息流，除此之外还需要 MongoDB 作为配置存储介质
 
-> 需要注意的是 NATS 与 MongoDB 仅支持集群方式（原因是 NATS JetStream 至少需要3节点的最小集群，而为了配置的一致性 MongoDB 至少采用副本集方式）
-
 ![Transfer & Collector](./topology.png)
-[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fweplanx%2Ftransfer.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fweplanx%2Ftransfer?ref=badge_shield)
+
+> 需要注意的是 NATS 与 MongoDB 仅支持集群方式（原因是 NATS JetStream 至少需要3节点的最小集群，而为了配置的一致性 MongoDB 至少采用副本集方式）
 
 镜像源主要有：
 
