@@ -8,7 +8,7 @@
 日志传输器，配合日志采集器将相应的消息管道数据传输至支援的日志系统中。
 
 > 版本 `*.*.*` 为 [elastic-transfer](https://github.com/weplanx/log-transfer/tree/elastic-transfer) 已归档的分支项目
-> 请使用 `v*.*.*` 发布的版本
+> ，请使用 `v*.*.*` 发布的版本
 
 ## 客户端
 
