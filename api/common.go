@@ -25,18 +25,18 @@ func New(i *common.Inject) (s *grpc.Server, err error) {
 
 	// 初始化状态流
 	if _, err = i.Js.AddStream(&nats.StreamConfig{
-		Name: fmt.Sprintf(`namespaces:%s`, namespace),
+		Name: fmt.Sprintf(`logs:%s`, namespace),
 		Subjects: []string{
-			fmt.Sprintf(`namespaces.%s.ready`, namespace),
+			fmt.Sprintf(`logs.%s.ready`, namespace),
 		},
 		MaxMsgs: 1,
 	}, nats.Context(ctx)); err != nil {
 		return
 	}
 	if _, err = i.Js.AddStream(&nats.StreamConfig{
-		Name: fmt.Sprintf(`namespaces:%s:event`, namespace),
+		Name: fmt.Sprintf(`logs:%s:event`, namespace),
 		Subjects: []string{
-			fmt.Sprintf(`namespaces.%s.event`, namespace),
+			fmt.Sprintf(`logs.%s.event`, namespace),
 		},
 		Retention: nats.InterestPolicy,
 	}, nats.Context(ctx)); err != nil {
@@ -102,11 +102,11 @@ func New(i *common.Inject) (s *grpc.Server, err error) {
 		return
 	}
 	notExists := funk.Filter(loggers, func(v *Logger) bool {
-		return !funk.Contains(streams, v.Key)
+		return !funk.Contains(streams, fmt.Sprintf(`logs:%s:%s`, namespace, v.Key))
 	})
 	for _, v := range notExists.([]*Logger) {
-		name := fmt.Sprintf(`namespaces:%s:%s`, namespace, v.Key)
-		subject := fmt.Sprintf(`%s.%s`, namespace, v.Topic)
+		name := fmt.Sprintf(`logs:%s:%s`, namespace, v.Key)
+		subject := fmt.Sprintf(`logs.%s.%s`, namespace, v.Topic)
 		if _, err = i.Js.AddStream(&nats.StreamConfig{
 			Name:        name,
 			Subjects:    []string{subject},

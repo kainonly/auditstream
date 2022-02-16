@@ -59,7 +59,7 @@ func (x *API) ready(ctx context.Context, loggers []*Logger) (err error) {
 	if data, err = msgpack.Marshal(topics); err != nil {
 		return
 	}
-	subject := fmt.Sprintf(`namespaces.%s.ready`, x.Values.Namespace)
+	subject := fmt.Sprintf(`logs.%s.ready`, x.Values.Namespace)
 	if _, err = x.Js.Publish(subject, data, nats.Context(ctx)); err != nil {
 		return
 	}
@@ -75,7 +75,7 @@ func (x *API) event(ctx context.Context, topic string, action string) (err error
 	}); err != nil {
 		return
 	}
-	subject := fmt.Sprintf(`namespaces.%s.event`, x.Values.Namespace)
+	subject := fmt.Sprintf(`logs.%s.event`, x.Values.Namespace)
 	if _, err = x.Js.Publish(subject, data, nats.Context(ctx)); err != nil {
 		return
 	}
@@ -204,7 +204,7 @@ func (x *API) DeleteLogger(ctx context.Context, req *DeleteLoggerRequest) (_ *em
 		return
 	}
 
-	name := fmt.Sprintf(`namespaces:%s:%s`, x.Values.Namespace, req.Key)
+	name := fmt.Sprintf(`logs:%s:%s`, x.Values.Namespace, req.Key)
 	if funk.Contains(x.streams(), name) {
 		if err = x.Js.DeleteStream(name, nats.Context(ctx)); err != nil {
 			return
@@ -242,7 +242,7 @@ func (x *API) Info(ctx context.Context, req *InfoRequest) (rep *InfoReply, err e
 
 // Publish 投递日志
 func (x *API) Publish(ctx context.Context, req *PublishRequest) (_ *empty.Empty, err error) {
-	subject := fmt.Sprintf(`%s.%s`, x.Values.Namespace, req.Topic)
+	subject := fmt.Sprintf(`logs.%s.%s`, x.Values.Namespace, req.Topic)
 	if _, err = x.Js.Publish(subject, req.Payload, nats.Context(ctx)); err != nil {
 		return
 	}
