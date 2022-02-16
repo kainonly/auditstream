@@ -20,24 +20,30 @@ import (
 var Provides = wire.NewSet(New)
 
 func New(i *common.Inject) (s *grpc.Server, err error) {
-	// 初始化命名空间
+	ctx := context.Background()
+	namespace := i.Values.Namespace
+
+	// 初始化状态流
 	if _, err = i.Js.AddStream(&nats.StreamConfig{
-		Name:     "namespaces",
-		Subjects: []string{"namespaces.*.ready"},
-		MaxMsgs:  1,
-	}); err != nil {
+		Name: fmt.Sprintf(`namespaces:%s`, namespace),
+		Subjects: []string{
+			fmt.Sprintf(`namespaces.%s.ready`, namespace),
+		},
+		MaxMsgs: 1,
+	}, nats.Context(ctx)); err != nil {
 		return
 	}
 	if _, err = i.Js.AddStream(&nats.StreamConfig{
-		Name:      "namespaces-event",
-		Subjects:  []string{"namespaces.*.event"},
+		Name: fmt.Sprintf(`namespaces:%s:event`, namespace),
+		Subjects: []string{
+			fmt.Sprintf(`namespaces.%s.event`, namespace),
+		},
 		Retention: nats.InterestPolicy,
-	}); err != nil {
+	}, nats.Context(ctx)); err != nil {
 		return
 	}
 
 	// 存储索引
-	ctx := context.Background()
 	if _, err = i.Db.Collection(i.Values.Database.Collection).Indexes().
 		CreateMany(ctx, []mongo.IndexModel{
 			{
@@ -75,10 +81,11 @@ func New(i *common.Inject) (s *grpc.Server, err error) {
 
 	// 设置 TLS
 	if i.Values.TLS.Cert != "" && i.Values.TLS.Key != "" {
+		tls := i.Values.TLS
 		var creds credentials.TransportCredentials
 		if creds, err = credentials.NewServerTLSFromFile(
-			i.Values.TLS.Cert,
-			i.Values.TLS.Key,
+			tls.Cert,
+			tls.Key,
 		); err != nil {
 			return
 		}
@@ -88,7 +95,7 @@ func New(i *common.Inject) (s *grpc.Server, err error) {
 	s = grpc.NewServer(opts...)
 	api := &API{Inject: i}
 
-	// 检测是否同步
+	// 检测数据流是否同步
 	streams := api.streams()
 	loggers := make([]*Logger, 0)
 	if err = api.loggers(ctx, &loggers); err != nil {
@@ -98,23 +105,20 @@ func New(i *common.Inject) (s *grpc.Server, err error) {
 		return !funk.Contains(streams, v.Key)
 	})
 	for _, v := range notExists.([]*Logger) {
-		subject := fmt.Sprintf(`%s.%s`, i.Values.Namespace, v.Topic)
+		name := fmt.Sprintf(`namespaces:%s:%s`, namespace, v.Key)
+		subject := fmt.Sprintf(`%s.%s`, namespace, v.Topic)
 		if _, err = i.Js.AddStream(&nats.StreamConfig{
-			Name:        v.Key,
+			Name:        name,
 			Subjects:    []string{subject},
 			Description: v.Topic,
 			Retention:   nats.WorkQueuePolicy,
-		}); err != nil {
+		}, nats.Context(ctx)); err != nil {
 			return
 		}
 	}
 
-	// 发布初始化主题
-	topics := make([]string, len(loggers))
-	for i, v := range loggers {
-		topics[i] = v.Topic
-	}
-	if err = api.ready(topics); err != nil {
+	// 发布日志主题配置
+	if err = api.ready(ctx, loggers); err != nil {
 		return
 	}
 

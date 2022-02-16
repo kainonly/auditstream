@@ -50,19 +50,24 @@ func (x *API) loggers(ctx context.Context, v interface{}) (err error) {
 }
 
 // 发布初始化主题
-func (x *API) ready(topics []string) (err error) {
+func (x *API) ready(ctx context.Context, loggers []*Logger) (err error) {
+	topics := make([]string, len(loggers))
+	for i, v := range loggers {
+		topics[i] = v.Topic
+	}
 	var data []byte
 	if data, err = msgpack.Marshal(topics); err != nil {
 		return
 	}
 	subject := fmt.Sprintf(`namespaces.%s.ready`, x.Values.Namespace)
-	if _, err = x.Js.Publish(subject, data); err != nil {
+	if _, err = x.Js.Publish(subject, data, nats.Context(ctx)); err != nil {
 		return
 	}
 	return
 }
 
-func (x *API) event(topic string, action string) (err error) {
+// 事件投递
+func (x *API) event(ctx context.Context, topic string, action string) (err error) {
 	var data []byte
 	if data, err = msgpack.Marshal(map[string]string{
 		"topic":  topic,
@@ -71,7 +76,19 @@ func (x *API) event(topic string, action string) (err error) {
 		return
 	}
 	subject := fmt.Sprintf(`namespaces.%s.event`, x.Values.Namespace)
-	if _, err = x.Js.Publish(subject, data); err != nil {
+	if _, err = x.Js.Publish(subject, data, nats.Context(ctx)); err != nil {
+		return
+	}
+	return
+}
+
+// 变更状态配置
+func (x *API) changed(ctx context.Context) (err error) {
+	loggers := make([]*Logger, 0)
+	if err = x.loggers(ctx, &loggers); err != nil {
+		return
+	}
+	if err = x.ready(ctx, loggers); err != nil {
 		return
 	}
 	return
@@ -106,21 +123,25 @@ func (x *API) CreateLogger(ctx context.Context, req *CreateLoggerRequest) (_ *em
 				}); err != nil {
 				return
 			}
+			name := fmt.Sprintf(`namespaces:%s:%s`, x.Values.Namespace, key)
 			subject := fmt.Sprintf(`%s.%s`, x.Values.Namespace, req.Topic)
 			if _, err = x.Js.AddStream(&nats.StreamConfig{
-				Name:        key,
+				Name:        name,
 				Subjects:    []string{subject},
 				Description: req.Description,
 				Retention:   nats.WorkQueuePolicy,
 			}); err != nil {
 				return
 			}
-			if err = x.event(req.Topic, "create"); err != nil {
+			if err = x.event(ctx, req.Topic, "create"); err != nil {
 				return
 			}
 			return
 		},
 	); err != nil {
+		return
+	}
+	if err = x.changed(ctx); err != nil {
 		return
 	}
 	return &empty.Empty{}, nil
@@ -146,21 +167,25 @@ func (x *API) UpdateLogger(ctx context.Context, req *UpdateLoggerRequest) (_ *em
 				}); err != nil {
 				return
 			}
+			name := fmt.Sprintf(`namespaces:%s:%s`, x.Values.Namespace, req.Key)
 			subject := fmt.Sprintf(`%s.%s`, x.Values.Namespace, req.Topic)
 			if _, err = x.Js.UpdateStream(&nats.StreamConfig{
-				Name:        req.Key,
+				Name:        name,
 				Subjects:    []string{subject},
 				Description: req.Description,
 				Retention:   nats.WorkQueuePolicy,
-			}); err != nil {
+			}, nats.Context(ctx)); err != nil {
 				return
 			}
-			if err = x.event(req.Topic, "update"); err != nil {
+			if err = x.event(ctx, req.Topic, "update"); err != nil {
 				return
 			}
 			return
 		},
 	); err != nil {
+		return
+	}
+	if err = x.changed(ctx); err != nil {
 		return
 	}
 	return &empty.Empty{}, nil
@@ -179,13 +204,18 @@ func (x *API) DeleteLogger(ctx context.Context, req *DeleteLoggerRequest) (_ *em
 		return
 	}
 
-	if funk.Contains(x.streams(), req.Key) {
-		if err = x.Js.DeleteStream(req.Key); err != nil {
+	name := fmt.Sprintf(`namespaces:%s:%s`, x.Values.Namespace, req.Key)
+	if funk.Contains(x.streams(), name) {
+		if err = x.Js.DeleteStream(name, nats.Context(ctx)); err != nil {
 			return
 		}
-		if err = x.event(data.Topic, "delete"); err != nil {
+		if err = x.event(ctx, data.Topic, "delete"); err != nil {
 			return
 		}
+	}
+
+	if err = x.changed(ctx); err != nil {
+		return
 	}
 	return &empty.Empty{}, nil
 }
@@ -193,7 +223,7 @@ func (x *API) DeleteLogger(ctx context.Context, req *DeleteLoggerRequest) (_ *em
 // Info 获取详情
 func (x *API) Info(ctx context.Context, req *InfoRequest) (rep *InfoReply, err error) {
 	var info *nats.StreamInfo
-	if info, err = x.Js.StreamInfo(req.Key); err != nil {
+	if info, err = x.Js.StreamInfo(req.Key, nats.Context(ctx)); err != nil {
 		return
 	}
 	return &InfoReply{
@@ -213,7 +243,7 @@ func (x *API) Info(ctx context.Context, req *InfoRequest) (rep *InfoReply, err e
 // Publish 投递日志
 func (x *API) Publish(ctx context.Context, req *PublishRequest) (_ *empty.Empty, err error) {
 	subject := fmt.Sprintf(`%s.%s`, x.Values.Namespace, req.Topic)
-	if _, err = x.Js.Publish(subject, req.Payload); err != nil {
+	if _, err = x.Js.Publish(subject, req.Payload, nats.Context(ctx)); err != nil {
 		return
 	}
 	return &empty.Empty{}, nil
