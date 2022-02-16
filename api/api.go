@@ -29,14 +29,12 @@ func (x *API) name() string {
 	return x.Values.Database.Collection
 }
 
-// 判断流命名是否存在
-// 不能包含空格、制表符、句点 (.)、大于 (>) 或星号 (*)
-func (x *API) existsStream(name string) bool {
-	var names []string
+// 获取所有流
+func (x *API) streams() (names []string) {
 	for x := range x.Js.StreamNames() {
 		names = append(names, x)
 	}
-	return funk.Contains(names, name)
+	return
 }
 
 // 获取日志主题
@@ -51,21 +49,28 @@ func (x *API) loggers(ctx context.Context, v interface{}) (err error) {
 	return
 }
 
-// 触发订阅变更事件
-func (x *API) changed(ctx context.Context) (err error) {
-	loggers := make([]map[string]interface{}, 0)
-	if err = x.loggers(ctx, &loggers); err != nil {
-		return
-	}
-	topics := make([]string, len(loggers))
-	for i, v := range loggers {
-		topics[i] = v["topic"].(string)
-	}
+// 发布初始化主题
+func (x *API) ready(topics []string) (err error) {
 	var data []byte
 	if data, err = msgpack.Marshal(topics); err != nil {
 		return
 	}
-	subject := fmt.Sprintf(`namespaces.%s`, x.Values.Namespace)
+	subject := fmt.Sprintf(`namespaces.%s.ready`, x.Values.Namespace)
+	if _, err = x.Js.Publish(subject, data); err != nil {
+		return
+	}
+	return
+}
+
+func (x *API) event(topic string, action string) (err error) {
+	var data []byte
+	if data, err = msgpack.Marshal(map[string]string{
+		"topic":  topic,
+		"action": action,
+	}); err != nil {
+		return
+	}
+	subject := fmt.Sprintf(`namespaces.%s.event`, x.Values.Namespace)
 	if _, err = x.Js.Publish(subject, data); err != nil {
 		return
 	}
@@ -110,7 +115,7 @@ func (x *API) CreateLogger(ctx context.Context, req *CreateLoggerRequest) (_ *em
 			}); err != nil {
 				return
 			}
-			if err = x.changed(sessCtx); err != nil {
+			if err = x.event(req.Topic, "create"); err != nil {
 				return
 			}
 			return
@@ -150,7 +155,7 @@ func (x *API) UpdateLogger(ctx context.Context, req *UpdateLoggerRequest) (_ *em
 			}); err != nil {
 				return
 			}
-			if err = x.changed(sessCtx); err != nil {
+			if err = x.event(req.Topic, "update"); err != nil {
 				return
 			}
 			return
@@ -163,15 +168,22 @@ func (x *API) UpdateLogger(ctx context.Context, req *UpdateLoggerRequest) (_ *em
 
 // DeleteLogger 删除日志主题
 func (x *API) DeleteLogger(ctx context.Context, req *DeleteLoggerRequest) (_ *empty.Empty, err error) {
+	var data Logger
+	if err = x.Db.Collection(x.name()).
+		FindOne(ctx, bson.M{"key": req.Key}).
+		Decode(&data); err != nil {
+		return
+	}
 	if _, err = x.Db.Collection(x.name()).
 		DeleteOne(ctx, bson.M{"key": req.Key}); err != nil {
 		return
 	}
-	if x.existsStream(req.Key) {
+
+	if funk.Contains(x.streams(), req.Key) {
 		if err = x.Js.DeleteStream(req.Key); err != nil {
 			return
 		}
-		if err = x.changed(ctx); err != nil {
+		if err = x.event(data.Topic, "delete"); err != nil {
 			return
 		}
 	}

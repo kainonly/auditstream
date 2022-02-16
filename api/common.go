@@ -2,10 +2,12 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"github.com/google/wire"
 	zlogging "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	"github.com/nats-io/nats.go"
+	"github.com/thoas/go-funk"
 	"github.com/weplanx/transfer/common"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -15,23 +17,29 @@ import (
 	"google.golang.org/grpc/credentials"
 )
 
-var Provides = wire.NewSet(
-	New,
-)
+var Provides = wire.NewSet(New)
 
-func New(x *common.Inject) (s *grpc.Server, err error) {
+func New(i *common.Inject) (s *grpc.Server, err error) {
 	// 初始化命名空间
-	if _, err = x.Js.AddStream(&nats.StreamConfig{
+	if _, err = i.Js.AddStream(&nats.StreamConfig{
 		Name:     "namespaces",
-		Subjects: []string{"namespaces.>"},
+		Subjects: []string{"namespaces.*.ready"},
 		MaxMsgs:  1,
+	}); err != nil {
+		return
+	}
+	if _, err = i.Js.AddStream(&nats.StreamConfig{
+		Name:      "namespaces-event",
+		Subjects:  []string{"namespaces.*.event"},
+		Retention: nats.InterestPolicy,
 	}); err != nil {
 		return
 	}
 
 	// 存储索引
-	if _, err = x.Db.Collection(x.Values.Database.Collection).Indexes().
-		CreateMany(context.TODO(), []mongo.IndexModel{
+	ctx := context.Background()
+	if _, err = i.Db.Collection(i.Values.Database.Collection).Indexes().
+		CreateMany(ctx, []mongo.IndexModel{
 			{
 				Keys: bson.M{"key": 1},
 				Options: options.Index().
@@ -66,11 +74,11 @@ func New(x *common.Inject) (s *grpc.Server, err error) {
 	}
 
 	// 设置 TLS
-	if x.Values.TLS.Cert != "" && x.Values.TLS.Key != "" {
+	if i.Values.TLS.Cert != "" && i.Values.TLS.Key != "" {
 		var creds credentials.TransportCredentials
 		if creds, err = credentials.NewServerTLSFromFile(
-			x.Values.TLS.Cert,
-			x.Values.TLS.Key,
+			i.Values.TLS.Cert,
+			i.Values.TLS.Key,
 		); err != nil {
 			return
 		}
@@ -78,6 +86,38 @@ func New(x *common.Inject) (s *grpc.Server, err error) {
 	}
 
 	s = grpc.NewServer(opts...)
-	RegisterAPIServer(s, &API{Inject: x})
+	api := &API{Inject: i}
+
+	// 检测是否同步
+	streams := api.streams()
+	loggers := make([]*Logger, 0)
+	if err = api.loggers(ctx, &loggers); err != nil {
+		return
+	}
+	notExists := funk.Filter(loggers, func(v *Logger) bool {
+		return !funk.Contains(streams, v.Key)
+	})
+	for _, v := range notExists.([]*Logger) {
+		subject := fmt.Sprintf(`%s.%s`, i.Values.Namespace, v.Topic)
+		if _, err = i.Js.AddStream(&nats.StreamConfig{
+			Name:        v.Key,
+			Subjects:    []string{subject},
+			Description: v.Topic,
+			Retention:   nats.WorkQueuePolicy,
+		}); err != nil {
+			return
+		}
+	}
+
+	// 发布初始化主题
+	topics := make([]string, len(loggers))
+	for i, v := range loggers {
+		topics[i] = v.Topic
+	}
+	if err = api.ready(topics); err != nil {
+		return
+	}
+
+	RegisterAPIServer(s, api)
 	return
 }
