@@ -66,7 +66,7 @@ func TestTransfer_GetLoggers(t *testing.T) {
 }
 
 func TestTransfer_UpdateLogger(t *testing.T) {
-	if err := x.UpdateLogger(context.TODO(), "901e78d2-8264-44f2-8bca-23232423f50b",
+	if err := x.UpdateLogger(context.TODO(), "8dd971ce-d811-4568-90c5-9a032b991861",
 		"system",
 		"Transfer 修改",
 	); err != nil {
@@ -103,7 +103,7 @@ func TestTransfer_Publish(t *testing.T) {
 	//	assert.Equal(t, "hello", v["msg"])
 	//	wg.Done()
 	//})
-	if err := x.Publish(context.TODO(), "system", map[string]interface{}{
+	if err := x.Publish(context.TODO(), "sys", map[string]interface{}{
 		"msg":  "hello",
 		"time": time.Now(),
 	}); err != nil {

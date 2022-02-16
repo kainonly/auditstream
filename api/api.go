@@ -123,8 +123,8 @@ func (x *API) CreateLogger(ctx context.Context, req *CreateLoggerRequest) (_ *em
 				}); err != nil {
 				return
 			}
-			name := fmt.Sprintf(`namespaces:%s:%s`, x.Values.Namespace, key)
-			subject := fmt.Sprintf(`%s.%s`, x.Values.Namespace, req.Topic)
+			name := fmt.Sprintf(`logs:%s:%s`, x.Values.Namespace, key)
+			subject := fmt.Sprintf(`logs.%s.%s`, x.Values.Namespace, req.Topic)
 			if _, err = x.Js.AddStream(&nats.StreamConfig{
 				Name:        name,
 				Subjects:    []string{subject},
@@ -167,8 +167,8 @@ func (x *API) UpdateLogger(ctx context.Context, req *UpdateLoggerRequest) (_ *em
 				}); err != nil {
 				return
 			}
-			name := fmt.Sprintf(`namespaces:%s:%s`, x.Values.Namespace, req.Key)
-			subject := fmt.Sprintf(`%s.%s`, x.Values.Namespace, req.Topic)
+			name := fmt.Sprintf(`logs:%s:%s`, x.Values.Namespace, req.Key)
+			subject := fmt.Sprintf(`logs.%s.%s`, x.Values.Namespace, req.Topic)
 			if _, err = x.Js.UpdateStream(&nats.StreamConfig{
 				Name:        name,
 				Subjects:    []string{subject},
