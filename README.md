@@ -5,7 +5,7 @@
 [![Release](https://img.shields.io/github/v/release/weplanx/transfer.svg?style=flat-square)](https://github.com/weplanx/transfer)
 [![GitHub license](https://img.shields.io/github/license/weplanx/transfer?style=flat-square)](https://raw.githubusercontent.com/weplanx/transfer/main/LICENSE)
 
-日志传输器，配合日志采集器将相应的消息管道数据传输至支援的日志系统中。
+日志传输器，将数据流发布至相同的服务命名空间，配合日志采集器写入日志系统
 
 > 版本 `*.*.*` 为 [elastic-transfer](https://github.com/weplanx/log-transfer/tree/elastic-transfer) 已归档的分支项目
 > ，请使用 `v*.*.*` 发布的版本（预发布用于构建测试）
