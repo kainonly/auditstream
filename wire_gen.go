@@ -16,6 +16,10 @@ import (
 // Injectors from wire.go:
 
 func App(value *common.Values) (*grpc.Server, error) {
+	logger, err := bootstrap.UseZap()
+	if err != nil {
+		return nil, err
+	}
 	client, err := bootstrap.UseMongoDB(value)
 	if err != nil {
 		return nil, err
@@ -31,6 +35,7 @@ func App(value *common.Values) (*grpc.Server, error) {
 	}
 	inject := &common.Inject{
 		Values: value,
+		Log:    logger,
 		Mongo:  client,
 		Db:     database,
 		Nats:   conn,

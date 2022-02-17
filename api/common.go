@@ -24,26 +24,27 @@ func New(i *common.Inject) (s *grpc.Server, err error) {
 	namespace := i.Values.Namespace
 
 	// 初始化状态流
+	readySubject := fmt.Sprintf(`logs.%s.ready`, namespace)
 	if _, err = i.Js.AddStream(&nats.StreamConfig{
-		Name: fmt.Sprintf(`logs:%s`, namespace),
-		Subjects: []string{
-			fmt.Sprintf(`logs.%s.ready`, namespace),
-		},
-		MaxMsgs: 1,
+		Name:     fmt.Sprintf(`logs:%s`, namespace),
+		Subjects: []string{readySubject},
+		MaxMsgs:  1,
 	}, nats.Context(ctx)); err != nil {
 		return
 	}
+	eventSubject := fmt.Sprintf(`logs.%s.event`, namespace)
 	if _, err = i.Js.AddStream(&nats.StreamConfig{
-		Name: fmt.Sprintf(`logs:%s:event`, namespace),
-		Subjects: []string{
-			fmt.Sprintf(`logs.%s.event`, namespace),
-		},
+		Name:      fmt.Sprintf(`logs:%s:event`, namespace),
+		Subjects:  []string{eventSubject},
 		Retention: nats.InterestPolicy,
 	}, nats.Context(ctx)); err != nil {
 		return
 	}
+	i.Log.Info("已初始化状态流",
+		zap.Any("state", []interface{}{readySubject, eventSubject}),
+	)
 
-	// 存储索引
+	// 初始化存储索引
 	if _, err = i.Db.Collection(i.Values.Database.Collection).Indexes().
 		CreateMany(ctx, []mongo.IndexModel{
 			{
@@ -61,20 +62,19 @@ func New(i *common.Inject) (s *grpc.Server, err error) {
 		}); err != nil {
 		return
 	}
+	i.Log.Info("已初始化存储索引",
+		zap.Any("state", []interface{}{"uk_key", "uk_topic"}),
+	)
 
 	// 中间件
-	var zlogger *zap.Logger
-	if zlogger, err = zap.NewProduction(); err != nil {
-		return
-	}
-	zlogging.ReplaceGrpcLoggerV2(zlogger)
+	zlogging.ReplaceGrpcLoggerV2(i.Log)
 	opts := []grpc.ServerOption{
 		grpc.ChainUnaryInterceptor(
-			zlogging.UnaryServerInterceptor(zlogger),
+			zlogging.UnaryServerInterceptor(i.Log),
 			recovery.UnaryServerInterceptor(),
 		),
 		grpc.ChainStreamInterceptor(
-			zlogging.StreamServerInterceptor(zlogger),
+			zlogging.StreamServerInterceptor(i.Log),
 			recovery.StreamServerInterceptor(),
 		),
 	}
@@ -115,6 +115,10 @@ func New(i *common.Inject) (s *grpc.Server, err error) {
 		}, nats.Context(ctx)); err != nil {
 			return
 		}
+		i.Log.Info("同步配置",
+			zap.String("name", name),
+			zap.String("subject", subject),
+		)
 	}
 
 	// 发布日志主题配置

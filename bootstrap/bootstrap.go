@@ -10,6 +10,7 @@ import (
 	"github.com/weplanx/transfer/common"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
 	"io/ioutil"
 	"os"
@@ -18,6 +19,7 @@ import (
 )
 
 var Provides = wire.NewSet(
+	UseZap,
 	UseMongoDB,
 	UseDatabase,
 	UseNats,
@@ -37,6 +39,13 @@ func SetValues() (values *common.Values, err error) {
 	}
 	err = yaml.Unmarshal(b, &values)
 	if err != nil {
+		return
+	}
+	return
+}
+
+func UseZap() (logger *zap.Logger, err error) {
+	if logger, err = zap.NewProduction(); err != nil {
 		return
 	}
 	return

@@ -3,10 +3,12 @@ package common
 import (
 	"github.com/nats-io/nats.go"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.uber.org/zap"
 )
 
 type Inject struct {
 	Values *Values
+	Log    *zap.Logger
 	Mongo  *mongo.Client
 	Db     *mongo.Database
 	Nats   *nats.Conn
