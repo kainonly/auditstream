@@ -62,7 +62,7 @@ func main() {
 
 ![Transfer & Collector](./topology.png)
 
-> 需要注意的是 NATS 与 MongoDB 仅支持集群方式（原因是 NATS JetStream 至少需要3节点的最小集群，而为了配置的一致性 MongoDB 至少采用副本集方式）
+> 需要注意的是 NATS 与 MongoDB 仅支持集群模式，原因是 NATS JetStream 需要 3 或 5 个 nats-server 支持故障容错，而为了配置的一致性 MongoDB 采用副本集方式
 
 镜像源主要有：
 
