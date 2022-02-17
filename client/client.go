@@ -51,14 +51,12 @@ func (x *Transfer) CreateLogger(ctx context.Context, topic string, description s
 
 // UpdateLogger 更新日志主题
 // @key 主题标识
-// @topic 主题
 // @description 描述
 // topic 与 description 为空同样会更新
-func (x *Transfer) UpdateLogger(ctx context.Context, key string, topic string, description string) (err error) {
+func (x *Transfer) UpdateLogger(ctx context.Context, key string, description string) (err error) {
 	if _, err = x.client.UpdateLogger(ctx,
 		&api.UpdateLoggerRequest{
 			Key:         key,
-			Topic:       topic,
 			Description: description,
 		}); err != nil {
 		return

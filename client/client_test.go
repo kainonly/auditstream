@@ -53,7 +53,7 @@ func TestTransfer_CreateLogger(t *testing.T) {
 	}
 }
 
-var key string
+var key string = "e87b5ccb-cd52-46f8-a056-ad5f1dfe7b52"
 
 func TestTransfer_GetLoggers(t *testing.T) {
 	result, err := x.GetLoggers(context.TODO())
@@ -66,9 +66,8 @@ func TestTransfer_GetLoggers(t *testing.T) {
 }
 
 func TestTransfer_UpdateLogger(t *testing.T) {
-	if err := x.UpdateLogger(context.TODO(), "8dd971ce-d811-4568-90c5-9a032b991861",
-		"system",
-		"Transfer 修改",
+	if err := x.UpdateLogger(context.TODO(), key,
+		"Transfer 工具",
 	); err != nil {
 		t.Error(err)
 	}
@@ -103,7 +102,7 @@ func TestTransfer_Publish(t *testing.T) {
 	//	assert.Equal(t, "hello", v["msg"])
 	//	wg.Done()
 	//})
-	if err := x.Publish(context.TODO(), "sys", map[string]interface{}{
+	if err := x.Publish(context.TODO(), "system", map[string]interface{}{
 		"msg":  "hello",
 		"time": time.Now(),
 	}); err != nil {

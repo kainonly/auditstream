@@ -66,7 +66,7 @@ func (x *API) ready(ctx context.Context, loggers []*Logger) (err error) {
 	return
 }
 
-// 事件投递
+// 事件状态
 func (x *API) event(ctx context.Context, topic string, action string) (err error) {
 	var data []byte
 	if data, err = msgpack.Marshal(map[string]string{
@@ -156,19 +156,25 @@ func (x *API) UpdateLogger(ctx context.Context, req *UpdateLoggerRequest) (_ *em
 	defer session.EndSession(ctx)
 	if _, err = session.WithTransaction(ctx,
 		func(sessCtx mongo.SessionContext) (_ interface{}, err error) {
+			var data Logger
+			if err = x.Db.Collection(x.name()).
+				FindOne(sessCtx, bson.M{"key": req.Key}).
+				Decode(&data); err != nil {
+				return
+			}
+
 			wcMajority := writeconcern.New(writeconcern.WMajority(), writeconcern.WTimeout(time.Second))
 			wcMajorityCollectionOpts := options.Collection().SetWriteConcern(wcMajority)
 			if _, err = x.Db.Collection(x.name(), wcMajorityCollectionOpts).
 				UpdateOne(sessCtx, bson.M{"key": req.Key}, bson.M{
 					"$set": bson.M{
-						"topic":       req.Topic,
 						"description": req.Description,
 					},
 				}); err != nil {
 				return
 			}
 			name := fmt.Sprintf(`logs:%s:%s`, x.Values.Namespace, req.Key)
-			subject := fmt.Sprintf(`logs.%s.%s`, x.Values.Namespace, req.Topic)
+			subject := fmt.Sprintf(`logs.%s.%s`, x.Values.Namespace, data.Topic)
 			if _, err = x.Js.UpdateStream(&nats.StreamConfig{
 				Name:        name,
 				Subjects:    []string{subject},
@@ -177,9 +183,7 @@ func (x *API) UpdateLogger(ctx context.Context, req *UpdateLoggerRequest) (_ *em
 			}, nats.Context(ctx)); err != nil {
 				return
 			}
-			if err = x.event(ctx, req.Topic, "update"); err != nil {
-				return
-			}
+
 			return
 		},
 	); err != nil {
@@ -223,7 +227,8 @@ func (x *API) DeleteLogger(ctx context.Context, req *DeleteLoggerRequest) (_ *em
 // Info 获取详情
 func (x *API) Info(ctx context.Context, req *InfoRequest) (rep *InfoReply, err error) {
 	var info *nats.StreamInfo
-	if info, err = x.Js.StreamInfo(req.Key, nats.Context(ctx)); err != nil {
+	name := fmt.Sprintf(`logs:%s:%s`, x.Values.Namespace, req.Key)
+	if info, err = x.Js.StreamInfo(name, nats.Context(ctx)); err != nil {
 		return
 	}
 	return &InfoReply{

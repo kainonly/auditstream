@@ -29,8 +29,7 @@ message CreateLoggerRequest {
 
 message UpdateLoggerRequest {
   string key = 1;
-  string topic = 2;
-  string description = 3;
+  string description = 2;
 }
 
 message DeleteLoggerRequest {
