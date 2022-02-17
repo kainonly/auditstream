@@ -8,7 +8,7 @@
 日志传输器，配合日志采集器将相应的消息管道数据传输至支援的日志系统中。
 
 > 版本 `*.*.*` 为 [elastic-transfer](https://github.com/weplanx/log-transfer/tree/elastic-transfer) 已归档的分支项目
-> ，请使用 `v*.*.*` 发布的版本
+> ，请使用 `v*.*.*` 发布的版本（预发布用于构建测试）
 
 ## 客户端
 
@@ -60,7 +60,7 @@ func main() {
 
 日志传输器采用更广泛 gRPC 进行服务通讯，通过 NATS JetStream 处理消息流，除此之外还需要 MongoDB 作为配置存储介质
 
-![Transfer & Collector](./topology.png)
+![Transfer](./topology.png)
 
 > 需要注意的是 NATS 与 MongoDB 仅支持集群模式，原因是 NATS JetStream 需要 3 或 5 个 nats-server 支持故障容错，而为了配置的一致性 MongoDB 采用副本集方式
 
