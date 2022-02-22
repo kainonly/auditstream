@@ -104,6 +104,14 @@ func (x *API) GetLoggers(ctx context.Context, _ *empty.Empty) (rep *GetLoggersRe
 
 // CreateLogger 创建日志主题
 func (x *API) CreateLogger(ctx context.Context, req *CreateLoggerRequest) (_ *empty.Empty, err error) {
+	var count int64
+	if count, err = x.Db.Collection(x.name()).
+		CountDocuments(ctx, bson.M{"key": req.Key}); err != nil {
+		return
+	}
+	if count != 0 {
+		return &empty.Empty{}, nil
+	}
 	var session mongo.Session
 	if session, err = x.Mongo.StartSession(); err != nil {
 		return
@@ -197,12 +205,8 @@ func (x *API) UpdateLogger(ctx context.Context, req *UpdateLoggerRequest) (_ *em
 func (x *API) DeleteLogger(ctx context.Context, req *DeleteLoggerRequest) (_ *empty.Empty, err error) {
 	var data Logger
 	if err = x.Db.Collection(x.name()).
-		FindOne(ctx, bson.M{"key": req.Key}).
+		FindOneAndDelete(ctx, bson.M{"key": req.Key}).
 		Decode(&data); err != nil {
-		return
-	}
-	if _, err = x.Db.Collection(x.name()).
-		DeleteOne(ctx, bson.M{"key": req.Key}); err != nil {
 		return
 	}
 
