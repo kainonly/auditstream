@@ -157,7 +157,7 @@ spec:
     spec:
       containers:
         - image: ccr.ccs.tencentyun.com/weplanx/transfer:${tag}
-          name: api
+          name: transfer
 ```
 
 例如：在 Github Actions
