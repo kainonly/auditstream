@@ -65,7 +65,6 @@ func TestTransfer_GetLoggers(t *testing.T) {
 		t.Error(err)
 	}
 	t.Log(result)
-	key = result[0].Key
 }
 
 func TestTransfer_UpdateLogger(t *testing.T) {

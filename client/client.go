@@ -36,6 +36,7 @@ func (x *Transfer) GetLoggers(ctx context.Context) (result []*api.Logger, err er
 }
 
 // CreateLogger 创建日志主题
+// @key 主题标识，建议使用 UUID
 // @topic 主题
 // @description 描述
 func (x *Transfer) CreateLogger(ctx context.Context, key string, topic string, description string) (err error) {
@@ -52,8 +53,7 @@ func (x *Transfer) CreateLogger(ctx context.Context, key string, topic string, d
 
 // UpdateLogger 更新日志主题
 // @key 主题标识
-// @description 描述
-// topic 与 description 为空同样会更新
+// @description 描述，为空同样会更新
 func (x *Transfer) UpdateLogger(ctx context.Context, key string, description string) (err error) {
 	if _, err = x.client.UpdateLogger(ctx,
 		&api.UpdateLoggerRequest{
