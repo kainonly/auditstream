@@ -47,16 +47,17 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
+var key = "e2066c57-5669-d2d8-243e-ba19a6c18c45"
+
 func TestTransfer_CreateLogger(t *testing.T) {
 	if err := x.CreateLogger(context.TODO(),
+		key,
 		"system",
 		"Transfer 新增",
 	); err != nil {
 		t.Error(err)
 	}
 }
-
-var key string
 
 func TestTransfer_GetLoggers(t *testing.T) {
 	result, err := x.GetLoggers(context.TODO())

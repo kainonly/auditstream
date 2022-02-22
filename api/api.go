@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/golang/protobuf/ptypes/empty"
-	"github.com/google/uuid"
 	"github.com/nats-io/nats.go"
 	"github.com/thoas/go-funk"
 	"github.com/vmihailenco/msgpack/v5"
@@ -105,7 +104,6 @@ func (x *API) GetLoggers(ctx context.Context, _ *empty.Empty) (rep *GetLoggersRe
 
 // CreateLogger 创建日志主题
 func (x *API) CreateLogger(ctx context.Context, req *CreateLoggerRequest) (_ *empty.Empty, err error) {
-	key := uuid.New().String()
 	var session mongo.Session
 	if session, err = x.Mongo.StartSession(); err != nil {
 		return
@@ -117,13 +115,13 @@ func (x *API) CreateLogger(ctx context.Context, req *CreateLoggerRequest) (_ *em
 			wcMajorityCollectionOpts := options.Collection().SetWriteConcern(wcMajority)
 			if _, err = x.Db.Collection(x.name(), wcMajorityCollectionOpts).
 				InsertOne(sessCtx, bson.M{
-					"key":         key,
+					"key":         req.Key,
 					"topic":       req.Topic,
 					"description": req.Description,
 				}); err != nil {
 				return
 			}
-			name := fmt.Sprintf(`logs:%s:%s`, x.Values.Namespace, key)
+			name := fmt.Sprintf(`logs:%s:%s`, x.Values.Namespace, req.Key)
 			subject := fmt.Sprintf(`logs.%s.%s`, x.Values.Namespace, req.Topic)
 			if _, err = x.Js.AddStream(&nats.StreamConfig{
 				Name:        name,

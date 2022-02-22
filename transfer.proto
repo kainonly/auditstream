@@ -23,8 +23,9 @@ message GetLoggersReply {
 }
 
 message CreateLoggerRequest {
-  string topic = 1;
-  string description = 2;
+  string key = 1;
+  string topic = 2;
+  string description = 3;
 }
 
 message UpdateLoggerRequest {

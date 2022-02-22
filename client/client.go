@@ -38,9 +38,10 @@ func (x *Transfer) GetLoggers(ctx context.Context) (result []*api.Logger, err er
 // CreateLogger 创建日志主题
 // @topic 主题
 // @description 描述
-func (x *Transfer) CreateLogger(ctx context.Context, topic string, description string) (err error) {
+func (x *Transfer) CreateLogger(ctx context.Context, key string, topic string, description string) (err error) {
 	if _, err = x.client.CreateLogger(ctx,
 		&api.CreateLoggerRequest{
+			Key:         key,
 			Topic:       topic,
 			Description: description,
 		}); err != nil {
