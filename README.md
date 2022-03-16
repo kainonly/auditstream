@@ -48,7 +48,7 @@ func main() {
 		panic(err)
 	}
 	ctx := context.Background()
-	result, err := transfer.GetLoggers(ctx)
+	result, err := transfer.Get(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -88,7 +88,7 @@ data:
     database:
       uri: mongodb://<username>:<password>@<host>:<port>/<database>?authSource=<authSource>
       name: <数据库名>
-      collection: <默认集合>
+      collection: <默认集合,transfers>
     nats:
       hosts: [ ]
       nkey:
@@ -102,7 +102,7 @@ kind: Deployment
 metadata:
   labels:
     app: transfer
-  name: transfer-deploy
+  name: transfer
 spec:
   replicas: 2
   selector:
@@ -132,13 +132,13 @@ spec:
                 path: "config.yml"
 ```
 
-3. 设置入口，服务网关推荐采用 traefik 做更多处理
+3. 设置入口，网关推荐采用 traefik [KUBERNETES-CRD](https://doc.traefik.io/traefik/routing/providers/kubernetes-crd/)
 
 ```yaml
 apiVersion: v1
 kind: Service
 metadata:
-  name: transfer-svc
+  name: transfer
 spec:
   ports:
     - port: 6000
@@ -149,7 +149,7 @@ spec:
 
 ## 滚动更新
 
-复制模板内容，并需要自行定制触发条件，原理是每次patch将模板中 `${tag}` 替换为版本执行
+复制如下内容，需要自行定制触发条件，原理是每次 patch 将模板中 `${tag}` 替换为版本执行
 
 ```yml
 spec:
@@ -160,8 +160,13 @@ spec:
           name: transfer
 ```
 
-例如：在 Github Actions
-中 `patch deployment transfer-deploy --patch "$(sed "s/\${tag}/${{steps.meta.outputs.version}}/" < ./config/patch.yml)"`，国内可使用**Coding持续部署**或**云效流水线**等。
+例如：在 Github Actions 中
+
+```shell
+patch deployment transfer-deploy --patch "$(sed "s/\${tag}/${{steps.meta.outputs.version}}/" < ./config/patch.yml)"
+```
+
+国内可使用 **Coding持续部署** 或 **云效流水线** 等
 
 ## License
 
