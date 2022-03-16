@@ -24,24 +24,26 @@ func New(i *common.Inject) (s *grpc.Server, err error) {
 	namespace := i.Values.Namespace
 
 	// 初始化状态流
-	readySubject := fmt.Sprintf(`logs.%s.ready`, namespace)
+	readyName := fmt.Sprintf(`%s:logs`, namespace)
+	readySubject := fmt.Sprintf(`%s.logs`, namespace)
 	if _, err = i.Js.AddStream(&nats.StreamConfig{
-		Name:     fmt.Sprintf(`logs:%s`, namespace),
+		Name:     readyName,
 		Subjects: []string{readySubject},
 		MaxMsgs:  1,
 	}, nats.Context(ctx)); err != nil {
 		return
 	}
-	eventSubject := fmt.Sprintf(`logs.%s.event`, namespace)
+	eventsName := fmt.Sprintf(`%s:logs:events`, namespace)
+	eventsSubject := fmt.Sprintf(`%s.logs.events`, namespace)
 	if _, err = i.Js.AddStream(&nats.StreamConfig{
-		Name:      fmt.Sprintf(`logs:%s:event`, namespace),
-		Subjects:  []string{eventSubject},
+		Name:      eventsName,
+		Subjects:  []string{eventsSubject},
 		Retention: nats.InterestPolicy,
 	}, nats.Context(ctx)); err != nil {
 		return
 	}
 	i.Log.Info("已初始化状态流",
-		zap.Any("state", []interface{}{readySubject, eventSubject}),
+		zap.Any("state", []interface{}{readySubject, eventsSubject}),
 	)
 
 	// 初始化存储索引
@@ -97,16 +99,16 @@ func New(i *common.Inject) (s *grpc.Server, err error) {
 
 	// 检测数据流是否同步
 	streams := api.streams()
-	loggers := make([]*Logger, 0)
-	if err = api.loggers(ctx, &loggers); err != nil {
+	loggers := make([]*Transfer, 0)
+	if err = api.getValues(ctx, &loggers); err != nil {
 		return
 	}
-	notExists := funk.Filter(loggers, func(v *Logger) bool {
-		return !funk.Contains(streams, fmt.Sprintf(`logs:%s:%s`, namespace, v.Key))
+	notExists := funk.Filter(loggers, func(v *Transfer) bool {
+		return !funk.Contains(streams, fmt.Sprintf(`%s:logs:%s`, namespace, v.Key))
 	})
-	for _, v := range notExists.([]*Logger) {
-		name := fmt.Sprintf(`logs:%s:%s`, namespace, v.Key)
-		subject := fmt.Sprintf(`logs.%s.%s`, namespace, v.Topic)
+	for _, v := range notExists.([]*Transfer) {
+		name := fmt.Sprintf(`%s:logs:%s`, namespace, v.Key)
+		subject := fmt.Sprintf(`%s.logs.%s`, namespace, v.Topic)
 		if _, err = i.Js.AddStream(&nats.StreamConfig{
 			Name:        name,
 			Subjects:    []string{subject},
@@ -122,7 +124,7 @@ func New(i *common.Inject) (s *grpc.Server, err error) {
 	}
 
 	// 发布日志主题配置
-	if err = api.ready(ctx, loggers); err != nil {
+	if err = api.publishReady(ctx, loggers); err != nil {
 		return
 	}
 

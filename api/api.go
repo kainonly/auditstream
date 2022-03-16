@@ -20,10 +20,10 @@ type API struct {
 	*common.Inject
 }
 
-// 集合名称，默认 logger
+// 集合名称
 func (x *API) name() string {
 	if x.Values.Database.Collection == "" {
-		return "logger"
+		return "transfers"
 	}
 	return x.Values.Database.Collection
 }
@@ -36,8 +36,8 @@ func (x *API) streams() (names []string) {
 	return
 }
 
-// 获取日志主题
-func (x *API) loggers(ctx context.Context, v interface{}) (err error) {
+// 获取配置数据
+func (x *API) getValues(ctx context.Context, v interface{}) (err error) {
 	var cursor *mongo.Cursor
 	if cursor, err = x.Db.Collection(x.name()).Find(ctx, bson.M{}); err != nil {
 		return
@@ -48,25 +48,25 @@ func (x *API) loggers(ctx context.Context, v interface{}) (err error) {
 	return
 }
 
-// 发布初始化主题
-func (x *API) ready(ctx context.Context, loggers []*Logger) (err error) {
-	topics := make([]string, len(loggers))
-	for i, v := range loggers {
-		topics[i] = v.Topic
+// 发布配置订阅
+func (x *API) publishReady(ctx context.Context, transfers []*Transfer) (err error) {
+	topics := make([]string, len(transfers))
+	for k, v := range transfers {
+		topics[k] = v.Topic
 	}
 	var data []byte
 	if data, err = msgpack.Marshal(topics); err != nil {
 		return
 	}
-	subject := fmt.Sprintf(`logs.%s.ready`, x.Values.Namespace)
+	subject := fmt.Sprintf(`%s.logs`, x.Values.Namespace)
 	if _, err = x.Js.Publish(subject, data, nats.Context(ctx)); err != nil {
 		return
 	}
 	return
 }
 
-// 事件状态
-func (x *API) event(ctx context.Context, topic string, action string) (err error) {
+// 发布事件状态
+func (x *API) publishEvent(ctx context.Context, topic string, action string) (err error) {
 	var data []byte
 	if data, err = msgpack.Marshal(map[string]string{
 		"topic":  topic,
@@ -74,7 +74,7 @@ func (x *API) event(ctx context.Context, topic string, action string) (err error
 	}); err != nil {
 		return
 	}
-	subject := fmt.Sprintf(`logs.%s.event`, x.Values.Namespace)
+	subject := fmt.Sprintf(`%s.logs.events`, x.Values.Namespace)
 	if _, err = x.Js.Publish(subject, data, nats.Context(ctx)); err != nil {
 		return
 	}
@@ -83,27 +83,27 @@ func (x *API) event(ctx context.Context, topic string, action string) (err error
 
 // 变更状态配置
 func (x *API) changed(ctx context.Context) (err error) {
-	loggers := make([]*Logger, 0)
-	if err = x.loggers(ctx, &loggers); err != nil {
+	transfers := make([]*Transfer, 0)
+	if err = x.getValues(ctx, &transfers); err != nil {
 		return
 	}
-	if err = x.ready(ctx, loggers); err != nil {
-		return
-	}
-	return
-}
-
-// GetLoggers 获取日志主题设置
-func (x *API) GetLoggers(ctx context.Context, _ *empty.Empty) (rep *GetLoggersReply, err error) {
-	rep = new(GetLoggersReply)
-	if err = x.loggers(ctx, &rep.Data); err != nil {
+	if err = x.publishReady(ctx, transfers); err != nil {
 		return
 	}
 	return
 }
 
-// CreateLogger 创建日志主题
-func (x *API) CreateLogger(ctx context.Context, req *CreateLoggerRequest) (_ *empty.Empty, err error) {
+// Get 获取配置
+func (x *API) Get(ctx context.Context, _ *empty.Empty) (rep *GetReply, err error) {
+	rep = new(GetReply)
+	if err = x.getValues(ctx, &rep.Data); err != nil {
+		return
+	}
+	return
+}
+
+// Create 创建传输
+func (x *API) Create(ctx context.Context, req *CreateRequest) (_ *empty.Empty, err error) {
 	var count int64
 	if count, err = x.Db.Collection(x.name()).
 		CountDocuments(ctx, bson.M{"key": req.Key}); err != nil {
@@ -129,8 +129,8 @@ func (x *API) CreateLogger(ctx context.Context, req *CreateLoggerRequest) (_ *em
 				}); err != nil {
 				return
 			}
-			name := fmt.Sprintf(`logs:%s:%s`, x.Values.Namespace, req.Key)
-			subject := fmt.Sprintf(`logs.%s.%s`, x.Values.Namespace, req.Topic)
+			name := fmt.Sprintf(`%s:logs:%s`, x.Values.Namespace, req.Key)
+			subject := fmt.Sprintf(`%s.logs.%s`, x.Values.Namespace, req.Topic)
 			if _, err = x.Js.AddStream(&nats.StreamConfig{
 				Name:        name,
 				Subjects:    []string{subject},
@@ -139,7 +139,7 @@ func (x *API) CreateLogger(ctx context.Context, req *CreateLoggerRequest) (_ *em
 			}); err != nil {
 				return
 			}
-			if err = x.event(ctx, req.Topic, "create"); err != nil {
+			if err = x.publishEvent(ctx, req.Topic, "create"); err != nil {
 				return
 			}
 			return
@@ -153,8 +153,8 @@ func (x *API) CreateLogger(ctx context.Context, req *CreateLoggerRequest) (_ *em
 	return &empty.Empty{}, nil
 }
 
-// UpdateLogger 更新日志主题
-func (x *API) UpdateLogger(ctx context.Context, req *UpdateLoggerRequest) (_ *empty.Empty, err error) {
+// Update 更新传输
+func (x *API) Update(ctx context.Context, req *UpdateRequest) (_ *empty.Empty, err error) {
 	var session mongo.Session
 	if session, err = x.Mongo.StartSession(); err != nil {
 		return
@@ -162,7 +162,7 @@ func (x *API) UpdateLogger(ctx context.Context, req *UpdateLoggerRequest) (_ *em
 	defer session.EndSession(ctx)
 	if _, err = session.WithTransaction(ctx,
 		func(sessCtx mongo.SessionContext) (_ interface{}, err error) {
-			var data Logger
+			var data Transfer
 			if err = x.Db.Collection(x.name()).
 				FindOne(sessCtx, bson.M{"key": req.Key}).
 				Decode(&data); err != nil {
@@ -179,8 +179,8 @@ func (x *API) UpdateLogger(ctx context.Context, req *UpdateLoggerRequest) (_ *em
 				}); err != nil {
 				return
 			}
-			name := fmt.Sprintf(`logs:%s:%s`, x.Values.Namespace, req.Key)
-			subject := fmt.Sprintf(`logs.%s.%s`, x.Values.Namespace, data.Topic)
+			name := fmt.Sprintf(`%s:logs:%s`, x.Values.Namespace, req.Key)
+			subject := fmt.Sprintf(`%s.logs.%s`, x.Values.Namespace, data.Topic)
 			if _, err = x.Js.UpdateStream(&nats.StreamConfig{
 				Name:        name,
 				Subjects:    []string{subject},
@@ -201,21 +201,21 @@ func (x *API) UpdateLogger(ctx context.Context, req *UpdateLoggerRequest) (_ *em
 	return &empty.Empty{}, nil
 }
 
-// DeleteLogger 删除日志主题
-func (x *API) DeleteLogger(ctx context.Context, req *DeleteLoggerRequest) (_ *empty.Empty, err error) {
-	var data Logger
+// Delete 删除传输
+func (x *API) Delete(ctx context.Context, req *DeleteRequest) (_ *empty.Empty, err error) {
+	var data Transfer
 	if err = x.Db.Collection(x.name()).
 		FindOneAndDelete(ctx, bson.M{"key": req.Key}).
 		Decode(&data); err != nil {
 		return
 	}
 
-	name := fmt.Sprintf(`logs:%s:%s`, x.Values.Namespace, req.Key)
+	name := fmt.Sprintf(`%s:logs:%s`, x.Values.Namespace, req.Key)
 	if funk.Contains(x.streams(), name) {
 		if err = x.Js.DeleteStream(name, nats.Context(ctx)); err != nil {
 			return
 		}
-		if err = x.event(ctx, data.Topic, "delete"); err != nil {
+		if err = x.publishEvent(ctx, data.Topic, "delete"); err != nil {
 			return
 		}
 	}
@@ -229,7 +229,7 @@ func (x *API) DeleteLogger(ctx context.Context, req *DeleteLoggerRequest) (_ *em
 // Info 获取详情
 func (x *API) Info(ctx context.Context, req *InfoRequest) (rep *InfoReply, err error) {
 	var info *nats.StreamInfo
-	name := fmt.Sprintf(`logs:%s:%s`, x.Values.Namespace, req.Key)
+	name := fmt.Sprintf(`%s:logs:%s`, x.Values.Namespace, req.Key)
 	if info, err = x.Js.StreamInfo(name, nats.Context(ctx)); err != nil {
 		return
 	}
@@ -249,7 +249,7 @@ func (x *API) Info(ctx context.Context, req *InfoRequest) (rep *InfoReply, err e
 
 // Publish 投递日志
 func (x *API) Publish(ctx context.Context, req *PublishRequest) (_ *empty.Empty, err error) {
-	subject := fmt.Sprintf(`logs.%s.%s`, x.Values.Namespace, req.Topic)
+	subject := fmt.Sprintf(`%s.logs.%s`, x.Values.Namespace, req.Topic)
 	if _, err = x.Js.Publish(subject, req.Payload, nats.Context(ctx)); err != nil {
 		return
 	}

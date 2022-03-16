@@ -49,8 +49,8 @@ func TestMain(m *testing.M) {
 
 var key = "e2066c57-5669-d2d8-243e-ba19a6c18c45"
 
-func TestTransfer_CreateLogger(t *testing.T) {
-	if err := x.CreateLogger(context.TODO(),
+func TestTransfer_Create(t *testing.T) {
+	if err := x.Create(context.TODO(),
 		key,
 		"system",
 		"Transfer 新增",
@@ -59,16 +59,16 @@ func TestTransfer_CreateLogger(t *testing.T) {
 	}
 }
 
-func TestTransfer_GetLoggers(t *testing.T) {
-	result, err := x.GetLoggers(context.TODO())
+func TestTransfer_Get(t *testing.T) {
+	result, err := x.Get(context.TODO())
 	if err != nil {
 		t.Error(err)
 	}
 	t.Log(result)
 }
 
-func TestTransfer_UpdateLogger(t *testing.T) {
-	if err := x.UpdateLogger(context.TODO(), key,
+func TestTransfer_Update(t *testing.T) {
+	if err := x.Update(context.TODO(), key,
 		"Transfer 工具",
 	); err != nil {
 		t.Error(err)
@@ -94,7 +94,7 @@ func TestTransfer_Publish(t *testing.T) {
 	}
 	var wg sync.WaitGroup
 	wg.Add(1)
-	subject := fmt.Sprintf(`logs.%s.%s`, v.Namespace, "system")
+	subject := fmt.Sprintf(`%s.logs.%s`, v.Namespace, "system")
 	go js.Subscribe(subject, func(msg *nats.Msg) {
 		var v map[string]interface{}
 		if err := msgpack.Unmarshal(msg.Data, &v); err != nil {
@@ -113,8 +113,8 @@ func TestTransfer_Publish(t *testing.T) {
 	wg.Wait()
 }
 
-func TestTransfer_DeleteLogger(t *testing.T) {
-	if err := x.DeleteLogger(context.TODO(), key); err != nil {
+func TestTransfer_Delete(t *testing.T) {
+	if err := x.Delete(context.TODO(), key); err != nil {
 		t.Error(err)
 	}
 }

@@ -4,36 +4,36 @@ option go_package = "github.com/weplanx/transfer/api";
 import "google/protobuf/empty.proto";
 
 service API {
-  rpc GetLoggers(google.protobuf.Empty) returns (GetLoggersReply) {}
-  rpc CreateLogger(CreateLoggerRequest) returns (google.protobuf.Empty) {}
-  rpc UpdateLogger(UpdateLoggerRequest) returns (google.protobuf.Empty) {}
-  rpc DeleteLogger(DeleteLoggerRequest) returns (google.protobuf.Empty) {}
+  rpc Get(google.protobuf.Empty) returns (GetReply) {}
+  rpc Create(CreateRequest) returns (google.protobuf.Empty) {}
+  rpc Update(UpdateRequest) returns (google.protobuf.Empty) {}
+  rpc Delete(DeleteRequest) returns (google.protobuf.Empty) {}
   rpc Info(InfoRequest) returns (InfoReply) {}
   rpc Publish(PublishRequest) returns (google.protobuf.Empty) {}
 }
 
-message Logger {
+message Transfer {
   string key = 1;
   string topic = 2;
   string description = 3;
 }
 
-message GetLoggersReply {
-  repeated Logger data = 1;
+message GetReply {
+  repeated Transfer data = 1;
 }
 
-message CreateLoggerRequest {
+message CreateRequest {
   string key = 1;
   string topic = 2;
   string description = 3;
 }
 
-message UpdateLoggerRequest {
+message UpdateRequest {
   string key = 1;
   string description = 2;
 }
 
-message DeleteLoggerRequest {
+message DeleteRequest {
   string key = 1;
 }
 

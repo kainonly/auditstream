@@ -29,7 +29,7 @@ var Provides = wire.NewSet(
 // SetValues 初始化配置
 func SetValues() (values *common.Values, err error) {
 	if _, err = os.Stat("./config/config.yml"); os.IsNotExist(err) {
-		err = errors.New("the path [./config.yml] does not have a configuration file")
+		err = errors.New("静态配置不存在，请检查路径 [./config/config.yml]")
 		return
 	}
 	var b []byte
@@ -73,7 +73,7 @@ func UseNats(values *common.Values) (nc *nats.Conn, err error) {
 		return
 	}
 	if !nkeys.IsValidPublicUserKey(pub) {
-		return nil, fmt.Errorf("nats: Not a valid nkey user seed")
+		return nil, fmt.Errorf("nkey 验证失败")
 	}
 	if nc, err = nats.Connect(
 		strings.Join(values.Nats.Hosts, ","),

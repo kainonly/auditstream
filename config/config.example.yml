@@ -6,7 +6,7 @@ namespace: <命名空间>
 database:
   uri: mongodb://<username>:<password>@<host>:<port>/<database>?authSource=<authSource>
   name: <数据库名>
-  collection: <默认集合>
+  collection: <默认集合,transfers>
 nats:
   hosts: [ ]
   nkey:

@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   labels:
     app: transfer
-  name: transfer-deploy
+  name: transfer
 spec:
   replicas: 2
   selector:
@@ -35,7 +35,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: transfer-svc
+  name: transfer
 spec:
   ports:
     - port: 6000

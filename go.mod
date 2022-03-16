@@ -6,7 +6,6 @@ require (
 	github.com/golang/protobuf v1.5.0
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/go-cmp v0.5.6 // indirect
-	github.com/google/uuid v1.3.0
 	github.com/google/wire v0.5.0
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
 	github.com/kr/pretty v0.2.0 // indirect

@@ -26,22 +26,19 @@ func (x *Transfer) Close() error {
 	return x.conn.Close()
 }
 
-// GetLoggers 获取日志主题设置
-func (x *Transfer) GetLoggers(ctx context.Context) (result []*api.Logger, err error) {
-	var rep *api.GetLoggersReply
-	if rep, err = x.client.GetLoggers(ctx, &empty.Empty{}); err != nil {
+// Get 获取设置
+func (x *Transfer) Get(ctx context.Context) (result []*api.Transfer, err error) {
+	var rep *api.GetReply
+	if rep, err = x.client.Get(ctx, &empty.Empty{}); err != nil {
 		return
 	}
 	return rep.GetData(), nil
 }
 
-// CreateLogger 创建日志主题
-// @key 主题标识，建议使用 UUID
-// @topic 主题
-// @description 描述
-func (x *Transfer) CreateLogger(ctx context.Context, key string, topic string, description string) (err error) {
-	if _, err = x.client.CreateLogger(ctx,
-		&api.CreateLoggerRequest{
+// Create 创建传输
+func (x *Transfer) Create(ctx context.Context, key string, topic string, description string) (err error) {
+	if _, err = x.client.Create(ctx,
+		&api.CreateRequest{
 			Key:         key,
 			Topic:       topic,
 			Description: description,
@@ -51,12 +48,10 @@ func (x *Transfer) CreateLogger(ctx context.Context, key string, topic string, d
 	return
 }
 
-// UpdateLogger 更新日志主题
-// @key 主题标识
-// @description 描述，为空同样会更新
-func (x *Transfer) UpdateLogger(ctx context.Context, key string, description string) (err error) {
-	if _, err = x.client.UpdateLogger(ctx,
-		&api.UpdateLoggerRequest{
+// Update 更新传输
+func (x *Transfer) Update(ctx context.Context, key string, description string) (err error) {
+	if _, err = x.client.Update(ctx,
+		&api.UpdateRequest{
 			Key:         key,
 			Description: description,
 		}); err != nil {
@@ -65,24 +60,20 @@ func (x *Transfer) UpdateLogger(ctx context.Context, key string, description str
 	return
 }
 
-// DeleteLogger 删除日志主题
-// @key 主题标识
-func (x *Transfer) DeleteLogger(ctx context.Context, key string) (err error) {
-	if _, err = x.client.DeleteLogger(ctx, &api.DeleteLoggerRequest{Key: key}); err != nil {
+// Delete 删除传输
+func (x *Transfer) Delete(ctx context.Context, key string) (err error) {
+	if _, err = x.client.Delete(ctx, &api.DeleteRequest{Key: key}); err != nil {
 		return
 	}
 	return
 }
 
 // Info 获取日志主题详情
-// @key 主题标识
 func (x *Transfer) Info(ctx context.Context, key string) (*api.InfoReply, error) {
 	return x.client.Info(ctx, &api.InfoRequest{Key: key})
 }
 
 // Publish 投递日志
-// @topic 主题
-// @data 内容
 func (x *Transfer) Publish(ctx context.Context, topic string, data interface{}) (err error) {
 	var payload []byte
 	if payload, err = msgpack.Marshal(data); err != nil {

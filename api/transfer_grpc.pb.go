@@ -19,10 +19,10 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type APIClient interface {
-	GetLoggers(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GetLoggersReply, error)
-	CreateLogger(ctx context.Context, in *CreateLoggerRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	UpdateLogger(ctx context.Context, in *UpdateLoggerRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	DeleteLogger(ctx context.Context, in *DeleteLoggerRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	Get(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GetReply, error)
+	Create(ctx context.Context, in *CreateRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	Update(ctx context.Context, in *UpdateRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	Delete(ctx context.Context, in *DeleteRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	Info(ctx context.Context, in *InfoRequest, opts ...grpc.CallOption) (*InfoReply, error)
 	Publish(ctx context.Context, in *PublishRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
@@ -35,36 +35,36 @@ func NewAPIClient(cc grpc.ClientConnInterface) APIClient {
 	return &aPIClient{cc}
 }
 
-func (c *aPIClient) GetLoggers(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GetLoggersReply, error) {
-	out := new(GetLoggersReply)
-	err := c.cc.Invoke(ctx, "/transfer.API/GetLoggers", in, out, opts...)
+func (c *aPIClient) Get(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GetReply, error) {
+	out := new(GetReply)
+	err := c.cc.Invoke(ctx, "/transfer.API/Get", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *aPIClient) CreateLogger(ctx context.Context, in *CreateLoggerRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+func (c *aPIClient) Create(ctx context.Context, in *CreateRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, "/transfer.API/CreateLogger", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/transfer.API/Create", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *aPIClient) UpdateLogger(ctx context.Context, in *UpdateLoggerRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+func (c *aPIClient) Update(ctx context.Context, in *UpdateRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, "/transfer.API/UpdateLogger", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/transfer.API/Update", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *aPIClient) DeleteLogger(ctx context.Context, in *DeleteLoggerRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+func (c *aPIClient) Delete(ctx context.Context, in *DeleteRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, "/transfer.API/DeleteLogger", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/transfer.API/Delete", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -93,10 +93,10 @@ func (c *aPIClient) Publish(ctx context.Context, in *PublishRequest, opts ...grp
 // All implementations must embed UnimplementedAPIServer
 // for forward compatibility
 type APIServer interface {
-	GetLoggers(context.Context, *emptypb.Empty) (*GetLoggersReply, error)
-	CreateLogger(context.Context, *CreateLoggerRequest) (*emptypb.Empty, error)
-	UpdateLogger(context.Context, *UpdateLoggerRequest) (*emptypb.Empty, error)
-	DeleteLogger(context.Context, *DeleteLoggerRequest) (*emptypb.Empty, error)
+	Get(context.Context, *emptypb.Empty) (*GetReply, error)
+	Create(context.Context, *CreateRequest) (*emptypb.Empty, error)
+	Update(context.Context, *UpdateRequest) (*emptypb.Empty, error)
+	Delete(context.Context, *DeleteRequest) (*emptypb.Empty, error)
 	Info(context.Context, *InfoRequest) (*InfoReply, error)
 	Publish(context.Context, *PublishRequest) (*emptypb.Empty, error)
 	mustEmbedUnimplementedAPIServer()
@@ -106,17 +106,17 @@ type APIServer interface {
 type UnimplementedAPIServer struct {
 }
 
-func (UnimplementedAPIServer) GetLoggers(context.Context, *emptypb.Empty) (*GetLoggersReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetLoggers not implemented")
+func (UnimplementedAPIServer) Get(context.Context, *emptypb.Empty) (*GetReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Get not implemented")
 }
-func (UnimplementedAPIServer) CreateLogger(context.Context, *CreateLoggerRequest) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CreateLogger not implemented")
+func (UnimplementedAPIServer) Create(context.Context, *CreateRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Create not implemented")
 }
-func (UnimplementedAPIServer) UpdateLogger(context.Context, *UpdateLoggerRequest) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UpdateLogger not implemented")
+func (UnimplementedAPIServer) Update(context.Context, *UpdateRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Update not implemented")
 }
-func (UnimplementedAPIServer) DeleteLogger(context.Context, *DeleteLoggerRequest) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method DeleteLogger not implemented")
+func (UnimplementedAPIServer) Delete(context.Context, *DeleteRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Delete not implemented")
 }
 func (UnimplementedAPIServer) Info(context.Context, *InfoRequest) (*InfoReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Info not implemented")
@@ -137,74 +137,74 @@ func RegisterAPIServer(s grpc.ServiceRegistrar, srv APIServer) {
 	s.RegisterService(&API_ServiceDesc, srv)
 }
 
-func _API_GetLoggers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _API_Get_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(emptypb.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(APIServer).GetLoggers(ctx, in)
+		return srv.(APIServer).Get(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/transfer.API/GetLoggers",
+		FullMethod: "/transfer.API/Get",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(APIServer).GetLoggers(ctx, req.(*emptypb.Empty))
+		return srv.(APIServer).Get(ctx, req.(*emptypb.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _API_CreateLogger_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CreateLoggerRequest)
+func _API_Create_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(APIServer).CreateLogger(ctx, in)
+		return srv.(APIServer).Create(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/transfer.API/CreateLogger",
+		FullMethod: "/transfer.API/Create",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(APIServer).CreateLogger(ctx, req.(*CreateLoggerRequest))
+		return srv.(APIServer).Create(ctx, req.(*CreateRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _API_UpdateLogger_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateLoggerRequest)
+func _API_Update_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(APIServer).UpdateLogger(ctx, in)
+		return srv.(APIServer).Update(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/transfer.API/UpdateLogger",
+		FullMethod: "/transfer.API/Update",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(APIServer).UpdateLogger(ctx, req.(*UpdateLoggerRequest))
+		return srv.(APIServer).Update(ctx, req.(*UpdateRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _API_DeleteLogger_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DeleteLoggerRequest)
+func _API_Delete_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(APIServer).DeleteLogger(ctx, in)
+		return srv.(APIServer).Delete(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/transfer.API/DeleteLogger",
+		FullMethod: "/transfer.API/Delete",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(APIServer).DeleteLogger(ctx, req.(*DeleteLoggerRequest))
+		return srv.(APIServer).Delete(ctx, req.(*DeleteRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -253,20 +253,20 @@ var API_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*APIServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "GetLoggers",
-			Handler:    _API_GetLoggers_Handler,
+			MethodName: "Get",
+			Handler:    _API_Get_Handler,
 		},
 		{
-			MethodName: "CreateLogger",
-			Handler:    _API_CreateLogger_Handler,
+			MethodName: "Create",
+			Handler:    _API_Create_Handler,
 		},
 		{
-			MethodName: "UpdateLogger",
-			Handler:    _API_UpdateLogger_Handler,
+			MethodName: "Update",
+			Handler:    _API_Update_Handler,
 		},
 		{
-			MethodName: "DeleteLogger",
-			Handler:    _API_DeleteLogger_Handler,
+			MethodName: "Delete",
+			Handler:    _API_Delete_Handler,
 		},
 		{
 			MethodName: "Info",

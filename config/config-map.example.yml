@@ -11,7 +11,7 @@ data:
     namespace: <命名空间>
     database:
       uri: mongodb://<username>:<password>@<host>:<port>/<database>?authSource=<authSource>
-      name: <数据库名>
+      name: <数据库名,transfers>
       collection: <默认集合>
     nats:
       hosts: [ ]
