@@ -163,7 +163,7 @@ spec:
 例如：在 Github Actions 中
 
 ```shell
-patch deployment transfer-deploy --patch "$(sed "s/\${tag}/${{steps.meta.outputs.version}}/" < ./config/patch.yml)"
+patch deployment transfer --patch "$(sed "s/\${tag}/${{steps.meta.outputs.version}}/" < ./config/patch.yml)"
 ```
 
 国内可使用 **Coding持续部署** 或 **云效流水线** 等
