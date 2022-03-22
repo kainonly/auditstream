@@ -95,7 +95,8 @@ func TestTransfer_Publish(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	subject := fmt.Sprintf(`%s.logs.%s`, v.Namespace, "system")
-	go js.Subscribe(subject, func(msg *nats.Msg) {
+	queue := fmt.Sprintf(`%s:logs:%s`, v.Namespace, "system")
+	go js.QueueSubscribe(subject, queue, func(msg *nats.Msg) {
 		var v map[string]interface{}
 		if err := msgpack.Unmarshal(msg.Data, &v); err != nil {
 			t.Error(err)
