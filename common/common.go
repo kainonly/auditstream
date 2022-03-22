@@ -19,6 +19,7 @@ type Values struct {
 	Address   string   `yaml:"address"`
 	TLS       TLS      `yaml:"tls"`
 	Namespace string   `yaml:"namespace"`
+	Debug     bool     `yaml:"debug"`
 	Database  Database `yaml:"database"`
 	Nats      Nats     `yaml:"nats"`
 }
