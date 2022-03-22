@@ -16,7 +16,7 @@ import (
 // Injectors from wire.go:
 
 func App(value *common.Values) (*grpc.Server, error) {
-	logger, err := bootstrap.UseZap()
+	logger, err := bootstrap.UseZap(value)
 	if err != nil {
 		return nil, err
 	}
