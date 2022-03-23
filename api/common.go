@@ -69,7 +69,7 @@ func New(i *common.Inject) (s *grpc.Server, err error) {
 	)
 
 	// 中间件
-	zlogging.ReplaceGrpcLoggerV2(i.Log)
+	//zlogging.ReplaceGrpcLoggerV2(i.Log)
 	opts := []grpc.ServerOption{
 		grpc.ChainUnaryInterceptor(
 			zlogging.UnaryServerInterceptor(i.Log),

@@ -6,6 +6,7 @@ import (
 	"github.com/vmihailenco/msgpack/v5"
 	"github.com/weplanx/transfer/api"
 	"google.golang.org/grpc"
+	"time"
 )
 
 type Transfer struct {
@@ -71,6 +72,17 @@ func (x *Transfer) Delete(ctx context.Context, key string) (err error) {
 // Info 获取日志主题详情
 func (x *Transfer) Info(ctx context.Context, key string) (*api.InfoReply, error) {
 	return x.client.Info(ctx, &api.InfoRequest{Key: key})
+}
+
+type CLSDto struct {
+	// 日志主题ID
+	TopicId string `msgpack:"topic_id"`
+
+	// 写入记录
+	Record map[string]string `msgpack:"record"`
+
+	// 时间
+	Time time.Time `msgpack:"time"`
 }
 
 // Publish 投递日志
