@@ -15,6 +15,7 @@ type Transfer struct {
 	conn   *grpc.ClientConn
 }
 
+// New 创建传输器
 func New(addr string, opts ...grpc.DialOption) (x *Transfer, err error) {
 	x = new(Transfer)
 	if x.conn, err = grpc.Dial(addr, opts...); err != nil {
