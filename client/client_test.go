@@ -96,19 +96,29 @@ func TestTransfer_Publish(t *testing.T) {
 	wg.Add(1)
 	subject := fmt.Sprintf(`%s.logs.%s`, v.Namespace, "system")
 	queue := fmt.Sprintf(`%s:logs:%s`, v.Namespace, "system")
+	now := time.Now()
 	go js.QueueSubscribe(subject, queue, func(msg *nats.Msg) {
-		var v map[string]interface{}
-		if err := msgpack.Unmarshal(msg.Data, &v); err != nil {
+		var data CLSDto
+		if err := msgpack.Unmarshal(msg.Data, &data); err != nil {
 			t.Error(err)
 		}
-		t.Log(v)
-		assert.Equal(t, "hello", v["msg"])
+		t.Log(data)
+		assert.Equal(t, "0ff5483a-7ddc-44e0-b723-c3417988663f", data.TopicId)
+		assert.Equal(t, map[string]string{"msg": "hi"}, data.Record)
+		assert.Equal(t, now.Unix(), data.Time.Unix())
 		wg.Done()
 	})
-	if err := x.Publish(context.TODO(), "system", map[string]interface{}{
-		"msg":  "hello",
-		"time": time.Now(),
-	}); err != nil {
+	payload, err := NewPayload[CLSDto](CLSDto{
+		TopicId: "0ff5483a-7ddc-44e0-b723-c3417988663f",
+		Record: map[string]string{
+			"msg": "hi",
+		},
+		Time: now,
+	})
+	if err != nil {
+		t.Error(err)
+	}
+	if err := x.Publish(context.TODO(), "system", payload); err != nil {
 		t.Error(err)
 	}
 	wg.Wait()

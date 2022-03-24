@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"github.com/go-playground/validator/v10"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/vmihailenco/msgpack/v5"
 	"github.com/weplanx/transfer/api"
@@ -75,22 +76,45 @@ func (x *Transfer) Info(ctx context.Context, key string) (*api.InfoReply, error)
 }
 
 type CLSDto struct {
-	// 日志主题ID
-	TopicId string `msgpack:"topic_id"`
+	// CLS 日志主题 ID
+	TopicId string `msgpack:"topic_id" validate:"required"`
 
 	// 写入记录
-	Record map[string]string `msgpack:"record"`
+	Record map[string]string `msgpack:"record" validate:"required"`
 
 	// 时间
-	Time time.Time `msgpack:"time"`
+	Time time.Time `msgpack:"time" validate:"required"`
 }
 
-// Publish 投递日志
-func (x *Transfer) Publish(ctx context.Context, topic string, data interface{}) (err error) {
-	var payload []byte
+type InfluxDto struct {
+	// 度量
+	Measurement string `msgpack:"measurement" validate:"required"`
+
+	// 标签
+	Tags map[string]string `msgpack:"tags" validate:"required"`
+
+	// 字段
+	Fields map[string]interface{} `msgpack:"fields" validate:"required"`
+
+	// 时间
+	Time time.Time `msgpack:"time" validate:"required"`
+}
+
+type Payload []byte
+
+// NewPayload 创建载荷
+func NewPayload[T CLSDto | InfluxDto](data T) (payload Payload, err error) {
+	if err = validator.New().Struct(&data); err != nil {
+		return
+	}
 	if payload, err = msgpack.Marshal(data); err != nil {
 		return
 	}
+	return
+}
+
+// Publish 投递日志
+func (x *Transfer) Publish(ctx context.Context, topic string, payload Payload) (err error) {
 	if _, err = x.client.Publish(ctx,
 		&api.PublishRequest{
 			Topic:   topic,
