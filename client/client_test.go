@@ -108,7 +108,7 @@ func TestTransfer_Publish(t *testing.T) {
 		assert.Equal(t, now.Unix(), data.Time.Unix())
 		wg.Done()
 	})
-	payload, err := NewPayload[CLSDto](CLSDto{
+	payload, err := NewPayload(CLSDto{
 		TopicId: "0ff5483a-7ddc-44e0-b723-c3417988663f",
 		Record: map[string]string{
 			"msg": "hi",

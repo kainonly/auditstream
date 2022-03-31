@@ -104,7 +104,7 @@ type InfluxDto struct {
 type Payload []byte
 
 // NewPayload 创建载荷
-func NewPayload[T CLSDto | InfluxDto](data T) (payload Payload, err error) {
+func NewPayload(data interface{}) (payload Payload, err error) {
 	if err = validator.New().Struct(&data); err != nil {
 		return
 	}
