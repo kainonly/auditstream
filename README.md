@@ -5,7 +5,7 @@
 [![Release](https://img.shields.io/github/v/release/weplanx/transfer.svg?style=flat-square)](https://github.com/weplanx/transfer)
 [![GitHub license](https://img.shields.io/github/license/weplanx/transfer?style=flat-square)](https://raw.githubusercontent.com/weplanx/transfer/main/LICENSE)
 
-日志传输器，将数据流发布至相同的服务命名空间，配合日志采集器写入日志系统
+日志传输器是以 Push 为主的服务，作用是对日志类流队列进行统一管理，将高频写入的日志数据进行削峰缓冲，同时填补非高可用日志系统数据的可靠性，配合相同命名空间的日志采集器写入日志系统
 
 > 版本 `*.*.*` 为 [elastic-transfer](https://github.com/weplanx/log-transfer/tree/elastic-transfer) 已归档的分支项目
 > ，请使用 `v*.*.*` 发布的版本（预发布用于构建测试）
@@ -171,5 +171,3 @@ patch deployment transfer --patch "$(sed "s/\${tag}/${{steps.meta.outputs.versio
 ## License
 
 [BSD-3-Clause License](https://github.com/weplanx/transfer/blob/main/LICENSE)
-
-[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fweplanx%2Ftransfer.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fweplanx%2Ftransfer?ref=badge_large)
