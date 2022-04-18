@@ -1,5 +1,7 @@
 # Weplanx Transfer
 
+[![Github Actions](https://img.shields.io/github/workflow/status/weplanx/transfer/testing?style=flat-square)](https://github.com/weplanx/transfer/actions)
+[![Coveralls github](https://img.shields.io/coveralls/github/weplanx/transfer.svg?style=flat-square)](https://coveralls.io/github/weplanx/transfer)
 [![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/weplanx/transfer?style=flat-square)](https://github.com/weplanx/transfer)
 [![Go Report Card](https://goreportcard.com/badge/github.com/weplanx/transfer?style=flat-square)](https://goreportcard.com/report/github.com/weplanx/transfer)
 [![Release](https://img.shields.io/github/v/release/weplanx/transfer.svg?style=flat-square)](https://github.com/weplanx/transfer)
