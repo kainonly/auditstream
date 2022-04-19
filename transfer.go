@@ -29,7 +29,9 @@ func New(namespace string, js nats.JetStreamContext) (x *Transfer, err error) {
 }
 
 type Option struct {
-	Topic       string `msgpack:"topic"`
+	// 主题
+	Topic string `msgpack:"topic"`
+	// 描述
 	Description string `msgpack:"description"`
 }
 
