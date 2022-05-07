@@ -21,7 +21,7 @@ func New(namespace string, js nats.JetStreamContext) (x *Transfer, err error) {
 		Js:        js,
 	}
 	if x.Store, err = js.CreateObjectStore(&nats.ObjectStoreConfig{
-		Bucket: namespace,
+		Bucket: fmt.Sprintf(`%s_logs`, namespace),
 	}); err != nil {
 		return
 	}
