@@ -11,7 +11,7 @@
 
 > 版本 `*.*.*` 为 [elastic-transfer](https://github.com/weplanx/transfer/tree/elastic-transfer) 已归档的分支项目 ，请使用 `v*.*.*` 发布的版本（预发布用于构建测试）
 
-技术文档：[语雀](https://www.yuque.com/kainonly/weplanx/xpaakq)
+技术文档：[语雀](https://www.yuque.com/kainonly/weplanx/transfer)
 
 ## License
 
