@@ -3,9 +3,8 @@ package transfer
 import (
 	"context"
 	"fmt"
-	"github.com/go-playground/validator/v10"
+	"github.com/bytedance/sonic"
 	"github.com/nats-io/nats.go"
-	"github.com/vmihailenco/msgpack/v5"
 	"time"
 )
 
@@ -30,11 +29,12 @@ func New(namespace string, js nats.JetStreamContext) (x *Transfer, err error) {
 
 type Option struct {
 	// 主题
-	Topic string `msgpack:"topic"`
+	Topic string `json:"topic"`
 	// 描述
-	Description string `msgpack:"description"`
+	Description string `json:"description"`
 }
 
+// Get 获取传输器信息
 func (x *Transfer) Get(key string) (result map[string]interface{}, err error) {
 	result = make(map[string]interface{})
 	var b []byte
@@ -42,7 +42,7 @@ func (x *Transfer) Get(key string) (result map[string]interface{}, err error) {
 		return
 	}
 	var option Option
-	if err = msgpack.Unmarshal(b, &option); err != nil {
+	if err = sonic.Unmarshal(b, &option); err != nil {
 		return
 	}
 	result["option"] = option
@@ -55,9 +55,10 @@ func (x *Transfer) Get(key string) (result map[string]interface{}, err error) {
 	return
 }
 
+// Set 设置传输器
 func (x *Transfer) Set(key string, option Option) (err error) {
 	var b []byte
-	if b, err = msgpack.Marshal(option); err != nil {
+	if b, err = sonic.Marshal(option); err != nil {
 		return
 	}
 	if _, err = x.Store.PutBytes(key, b); err != nil {
@@ -76,6 +77,7 @@ func (x *Transfer) Set(key string, option Option) (err error) {
 	return
 }
 
+// Remove 移除配置
 func (x *Transfer) Remove(key string) (err error) {
 	if err = x.Store.Delete(key); err != nil {
 		return
@@ -84,47 +86,28 @@ func (x *Transfer) Remove(key string) (err error) {
 	return x.Js.DeleteStream(name)
 }
 
-type CLSDto struct {
-	// CLS 日志主题 ID
-	TopicId string `msgpack:"topic_id" validate:"required"`
-
-	// 写入记录
-	Record map[string]string `msgpack:"record" validate:"required"`
-
-	// 时间
-	Time time.Time `msgpack:"time" validate:"required"`
-}
-
-type InfluxDto struct {
+type Payload struct {
 	// 度量
-	Measurement string `msgpack:"measurement" validate:"required"`
+	Measurement string `json:"measurement"`
 
 	// 标签
-	Tags map[string]string `msgpack:"tags" validate:"required"`
+	Tags map[string]string `json:"tags"`
 
 	// 字段
-	Fields map[string]interface{} `msgpack:"fields" validate:"required"`
+	Fields map[string]interface{} `json:"fields"`
 
 	// 时间
-	Time time.Time `msgpack:"time" validate:"required"`
+	Time time.Time `json:"time"`
 }
 
-type Payload []byte
-
-// NewPayload 创建载荷
-func NewPayload(data interface{}) (payload Payload, err error) {
-	if err = validator.New().Struct(data); err != nil {
-		return
-	}
-	if payload, err = msgpack.Marshal(data); err != nil {
-		return
-	}
-	return
-}
-
+// Publish 发布
 func (x *Transfer) Publish(ctx context.Context, topic string, payload Payload) (err error) {
+	var b []byte
+	if b, err = sonic.Marshal(payload); err != nil {
+		return
+	}
 	subject := fmt.Sprintf(`%s.logs.%s`, x.Namespace, topic)
-	if _, err = x.Js.Publish(subject, payload, nats.Context(ctx)); err != nil {
+	if _, err = x.Js.Publish(subject, b, nats.Context(ctx)); err != nil {
 		return
 	}
 	return
