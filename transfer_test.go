@@ -99,16 +99,16 @@ func TestTransfer_Publish(t *testing.T) {
 		wg.Done()
 	})
 	if err := x.Publish(context.TODO(), "system", transfer.Payload{
-		Measurement: "tests",
-		Tags: map[string]string{
-			"uuid": "0ff5483a-7ddc-44e0-b723-c3417988663f",
+		Stream: map[string]interface{}{
+			"topic": "test",
 		},
-		Fields: map[string]interface{}{
-			"data": map[string]interface{}{
-				"msg": "hi",
+		Values: [][]interface{}{
+			{
+				now.UnixNano(), map[string]interface{}{
+					"msg": "hi",
+				},
 			},
 		},
-		Time: now,
 	}); err != nil {
 		t.Error(err)
 	}

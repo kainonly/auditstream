@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/bytedance/sonic"
 	"github.com/nats-io/nats.go"
-	"time"
 )
 
 type Transfer struct {
@@ -87,17 +86,11 @@ func (x *Transfer) Remove(key string) (err error) {
 }
 
 type Payload struct {
-	// 度量
-	Measurement string `json:"measurement"`
-
 	// 标签
-	Tags map[string]string `json:"tags"`
+	Stream map[string]interface{} `json:"stream"`
 
-	// 字段
-	Fields map[string]interface{} `json:"fields"`
-
-	// 时间
-	Time time.Time `json:"time"`
+	// 记录值
+	Values [][]interface{} `json:"values"`
 }
 
 // Publish 发布
