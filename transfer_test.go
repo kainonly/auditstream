@@ -88,7 +88,7 @@ func TestTransfer_Publish(t *testing.T) {
 	queue := fmt.Sprintf(`%s:logs:%s`, "alpha", "system")
 	now := time.Now()
 	go js.QueueSubscribe(subject, queue, func(msg *nats.Msg) {
-		var payload map[string]interface{}
+		var payload transfer.Payload
 		if err := sonic.Unmarshal(msg.Data, &payload); err != nil {
 			t.Error(err)
 		}
@@ -98,12 +98,15 @@ func TestTransfer_Publish(t *testing.T) {
 		//assert.Equal(t, now.Unix(), data.Time.Unix())
 		wg.Done()
 	})
-	if err := x.Publish(context.TODO(), "requests", map[string]interface{}{
-		"time":       now,
-		"request_id": "0ff5483a-7ddc-44e0-b723-c3417988663f",
-		"request": map[string]interface{}{
-			"body": map[string]interface{}{
-				"msg": "hi",
+	if err := x.Publish(context.TODO(), "system", transfer.Payload{
+		Stream: map[string]interface{}{
+			"topic": "test",
+		},
+		Values: [][]interface{}{
+			{
+				now.UnixNano(), map[string]interface{}{
+					"msg": "hi",
+				},
 			},
 		},
 	}); err != nil {

@@ -85,8 +85,16 @@ func (x *Transfer) Remove(key string) (err error) {
 	return x.Js.DeleteStream(name)
 }
 
+type Payload struct {
+	// 标签
+	Stream map[string]interface{} `json:"stream"`
+
+	// 记录值
+	Values [][]interface{} `json:"values"`
+}
+
 // Publish 发布
-func (x *Transfer) Publish(ctx context.Context, topic string, payload map[string]interface{}) (err error) {
+func (x *Transfer) Publish(ctx context.Context, topic string, payload Payload) (err error) {
 	var b []byte
 	if b, err = sonic.Marshal(payload); err != nil {
 		return
