@@ -9,11 +9,15 @@ import (
 )
 
 type Transfer struct {
+	// 命名空间
 	Namespace string
-	Js        nats.JetStreamContext
-	Store     nats.ObjectStore
+	// Nats JetStream
+	Js nats.JetStreamContext
+	// Nats ObjectStore
+	Store nats.ObjectStore
 }
 
+// New 新建传输
 func New(namespace string, js nats.JetStreamContext) (x *Transfer, err error) {
 	x = &Transfer{
 		Namespace: namespace,
@@ -86,6 +90,7 @@ func (x *Transfer) Remove(key string) (err error) {
 	return x.Js.DeleteStream(name)
 }
 
+// 载荷
 type Payload struct {
 	// 度量
 	Measurement string `json:"measurement"`

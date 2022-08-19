@@ -5,6 +5,7 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nkeys"
+	"github.com/stretchr/testify/assert"
 	"github.com/weplanx/transfer"
 	"os"
 	"sync"
@@ -56,7 +57,7 @@ func TestMain(m *testing.M) {
 	if js, err = nc.JetStream(nats.PublishAsyncMaxPending(256)); err != nil {
 		panic(err)
 	}
-	if x, err = transfer.New("alpha", js); err != nil {
+	if x, err = transfer.New("test", js); err != nil {
 		panic(err)
 	}
 	os.Exit(m.Run())
@@ -74,18 +75,18 @@ func TestTransfer_Set(t *testing.T) {
 }
 
 func TestTransfer_Get(t *testing.T) {
+	_, err := x.Get("not_exists")
+	assert.Error(t, err)
 	result, err := x.Get(key)
-	if err != nil {
-		t.Error(err)
-	}
+	assert.Nil(t, err)
 	t.Log(result)
 }
 
 func TestTransfer_Publish(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(1)
-	subject := fmt.Sprintf(`%s.logs.%s`, "alpha", "system")
-	queue := fmt.Sprintf(`%s:logs:%s`, "alpha", "system")
+	subject := fmt.Sprintf(`%s.logs.%s`, "test", "system")
+	queue := fmt.Sprintf(`%s:logs:%s`, "test", "system")
 	now := time.Now()
 	go js.QueueSubscribe(subject, queue, func(msg *nats.Msg) {
 		var payload transfer.Payload
@@ -93,12 +94,13 @@ func TestTransfer_Publish(t *testing.T) {
 			t.Error(err)
 		}
 		t.Log(payload)
-		//assert.Equal(t, "0ff5483a-7ddc-44e0-b723-c3417988663f", payload.TopicId)
-		//assert.Equal(t, map[string]string{"msg": "hi"}, data.Record)
-		//assert.Equal(t, now.Unix(), data.Time.Unix())
+		assert.Equal(t, "tests", payload.Measurement)
+		assert.Equal(t, "0ff5483a-7ddc-44e0-b723-c3417988663f", payload.Tags["uuid"])
+		assert.Equal(t, map[string]interface{}{"msg": "hi"}, payload.Fields["data"])
+		assert.Equal(t, now.UnixNano(), payload.Time.UnixNano())
 		wg.Done()
 	})
-	if err := x.Publish(context.TODO(), "system", transfer.Payload{
+	err := x.Publish(context.TODO(), "system", transfer.Payload{
 		Measurement: "tests",
 		Tags: map[string]string{
 			"uuid": "0ff5483a-7ddc-44e0-b723-c3417988663f",
@@ -109,14 +111,12 @@ func TestTransfer_Publish(t *testing.T) {
 			},
 		},
 		Time: now,
-	}); err != nil {
-		t.Error(err)
-	}
+	})
+	assert.Nil(t, err)
 	wg.Wait()
 }
 
 func TestTransfer_Remove(t *testing.T) {
-	if err := x.Remove(key); err != nil {
-		t.Error(err)
-	}
+	err := x.Remove(key)
+	assert.Nil(t, err)
 }
