@@ -90,11 +90,8 @@ func (x *Transfer) Remove(key string) (err error) {
 	return x.Js.DeleteStream(name)
 }
 
-// 载荷
+// Payload 载荷
 type Payload struct {
-	// 度量
-	Measurement string `json:"measurement"`
-
 	// 标签
 	Tags map[string]string `json:"tags"`
 

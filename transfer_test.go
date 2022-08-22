@@ -94,14 +94,12 @@ func TestTransfer_Publish(t *testing.T) {
 			t.Error(err)
 		}
 		t.Log(payload)
-		assert.Equal(t, "tests", payload.Measurement)
 		assert.Equal(t, "0ff5483a-7ddc-44e0-b723-c3417988663f", payload.Tags["uuid"])
 		assert.Equal(t, map[string]interface{}{"msg": "hi"}, payload.Fields["data"])
 		assert.Equal(t, now.UnixNano(), payload.Time.UnixNano())
 		wg.Done()
 	})
 	err := x.Publish(context.TODO(), "system", transfer.Payload{
-		Measurement: "tests",
 		Tags: map[string]string{
 			"uuid": "0ff5483a-7ddc-44e0-b723-c3417988663f",
 		},
