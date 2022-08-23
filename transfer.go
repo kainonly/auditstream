@@ -39,8 +39,8 @@ type Option struct {
 }
 
 // Get 获取传输器信息
-func (x *Transfer) Get(measurement string) (result map[string]interface{}, err error) {
-	result = make(map[string]interface{})
+func (x *Transfer) Get(measurement string) (data map[string]interface{}, err error) {
+	data = make(map[string]interface{})
 	var b []byte
 	if b, err = x.Store.GetBytes(measurement); err != nil {
 		return
@@ -49,26 +49,26 @@ func (x *Transfer) Get(measurement string) (result map[string]interface{}, err e
 	if err = sonic.Unmarshal(b, &option); err != nil {
 		return
 	}
-	result["option"] = option
+	data["option"] = option
 	name := fmt.Sprintf(`%s:logs:%s`, x.Namespace, measurement)
 	var info *nats.StreamInfo
 	if info, err = x.Js.StreamInfo(name); err != nil {
 		return
 	}
-	result["info"] = *info
+	data["info"] = *info
 	return
 }
 
 // Set 设置传输器
-func (x *Transfer) Set(measurement string, option Option) (err error) {
+func (x *Transfer) Set(option Option) (err error) {
 	var b []byte
 	if b, err = sonic.Marshal(option); err != nil {
 		return
 	}
-	if _, err = x.Store.PutBytes(measurement, b); err != nil {
+	if _, err = x.Store.PutBytes(option.Measurement, b); err != nil {
 		return
 	}
-	name := fmt.Sprintf(`%s:logs:%s`, x.Namespace, measurement)
+	name := fmt.Sprintf(`%s:logs:%s`, x.Namespace, option.Measurement)
 	subject := fmt.Sprintf(`%s.logs.%s`, x.Namespace, option.Measurement)
 	if _, err = x.Js.AddStream(&nats.StreamConfig{
 		Name:        name,
@@ -82,11 +82,11 @@ func (x *Transfer) Set(measurement string, option Option) (err error) {
 }
 
 // Remove 移除配置
-func (x *Transfer) Remove(key string) (err error) {
-	if err = x.Store.Delete(key); err != nil {
+func (x *Transfer) Remove(measurement string) (err error) {
+	if err = x.Store.Delete(measurement); err != nil {
 		return
 	}
-	name := fmt.Sprintf(`%s:logs:%s`, x.Namespace, key)
+	name := fmt.Sprintf(`%s:logs:%s`, x.Namespace, measurement)
 	return x.Js.DeleteStream(name)
 }
 

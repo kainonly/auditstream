@@ -63,10 +63,8 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-var key = "e2066c57-5669-d2d8-243e-ba19a6c18c45"
-
 func TestTransfer_Set(t *testing.T) {
-	if err := x.Set(key, transfer.Option{
+	if err := x.Set(transfer.Option{
 		Measurement: "system",
 		Description: "测试",
 	}); err != nil {
@@ -77,7 +75,7 @@ func TestTransfer_Set(t *testing.T) {
 func TestTransfer_Get(t *testing.T) {
 	_, err := x.Get("not_exists")
 	assert.Error(t, err)
-	result, err := x.Get(key)
+	result, err := x.Get("system")
 	assert.Nil(t, err)
 	t.Log(result)
 }
@@ -115,6 +113,6 @@ func TestTransfer_Publish(t *testing.T) {
 }
 
 func TestTransfer_Remove(t *testing.T) {
-	err := x.Remove(key)
+	err := x.Remove("system")
 	assert.Nil(t, err)
 }
