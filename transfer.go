@@ -33,16 +33,16 @@ func New(namespace string, js nats.JetStreamContext) (x *Transfer, err error) {
 
 type Option struct {
 	// 主题
-	Topic string `json:"topic"`
+	Measurement string `json:"measurement"`
 	// 描述
 	Description string `json:"description"`
 }
 
 // Get 获取传输器信息
-func (x *Transfer) Get(key string) (result map[string]interface{}, err error) {
+func (x *Transfer) Get(measurement string) (result map[string]interface{}, err error) {
 	result = make(map[string]interface{})
 	var b []byte
-	if b, err = x.Store.GetBytes(key); err != nil {
+	if b, err = x.Store.GetBytes(measurement); err != nil {
 		return
 	}
 	var option Option
@@ -50,7 +50,7 @@ func (x *Transfer) Get(key string) (result map[string]interface{}, err error) {
 		return
 	}
 	result["option"] = option
-	name := fmt.Sprintf(`%s:logs:%s`, x.Namespace, key)
+	name := fmt.Sprintf(`%s:logs:%s`, x.Namespace, measurement)
 	var info *nats.StreamInfo
 	if info, err = x.Js.StreamInfo(name); err != nil {
 		return
@@ -60,16 +60,16 @@ func (x *Transfer) Get(key string) (result map[string]interface{}, err error) {
 }
 
 // Set 设置传输器
-func (x *Transfer) Set(key string, option Option) (err error) {
+func (x *Transfer) Set(measurement string, option Option) (err error) {
 	var b []byte
 	if b, err = sonic.Marshal(option); err != nil {
 		return
 	}
-	if _, err = x.Store.PutBytes(key, b); err != nil {
+	if _, err = x.Store.PutBytes(measurement, b); err != nil {
 		return
 	}
-	name := fmt.Sprintf(`%s:logs:%s`, x.Namespace, key)
-	subject := fmt.Sprintf(`%s.logs.%s`, x.Namespace, option.Topic)
+	name := fmt.Sprintf(`%s:logs:%s`, x.Namespace, measurement)
+	subject := fmt.Sprintf(`%s.logs.%s`, x.Namespace, option.Measurement)
 	if _, err = x.Js.AddStream(&nats.StreamConfig{
 		Name:        name,
 		Subjects:    []string{subject},
@@ -103,12 +103,12 @@ type Payload struct {
 }
 
 // Publish 发布
-func (x *Transfer) Publish(ctx context.Context, topic string, payload Payload) (err error) {
+func (x *Transfer) Publish(ctx context.Context, measurement string, payload Payload) (err error) {
 	var b []byte
 	if b, err = sonic.Marshal(payload); err != nil {
 		return
 	}
-	subject := fmt.Sprintf(`%s.logs.%s`, x.Namespace, topic)
+	subject := fmt.Sprintf(`%s.logs.%s`, x.Namespace, measurement)
 	if _, err = x.Js.Publish(subject, b, nats.Context(ctx)); err != nil {
 		return
 	}

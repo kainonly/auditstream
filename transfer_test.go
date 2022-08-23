@@ -67,7 +67,7 @@ var key = "e2066c57-5669-d2d8-243e-ba19a6c18c45"
 
 func TestTransfer_Set(t *testing.T) {
 	if err := x.Set(key, transfer.Option{
-		Topic:       "system",
+		Measurement: "system",
 		Description: "测试",
 	}); err != nil {
 		t.Error(err)
