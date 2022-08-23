@@ -17,7 +17,7 @@ import (
 	"context"
 )
 
-var x *transfer.Transfer
+var client *transfer.Transfer
 var js nats.JetStreamContext
 
 func TestMain(m *testing.M) {
@@ -57,25 +57,24 @@ func TestMain(m *testing.M) {
 	if js, err = nc.JetStream(nats.PublishAsyncMaxPending(256)); err != nil {
 		panic(err)
 	}
-	if x, err = transfer.New("test", js); err != nil {
+	if client, err = transfer.New("test", js); err != nil {
 		panic(err)
 	}
 	os.Exit(m.Run())
 }
 
 func TestTransfer_Set(t *testing.T) {
-	if err := x.Set(transfer.Option{
+	err := client.Set(transfer.Option{
 		Measurement: "system",
 		Description: "测试",
-	}); err != nil {
-		t.Error(err)
-	}
+	})
+	assert.Nil(t, err)
 }
 
 func TestTransfer_Get(t *testing.T) {
-	_, err := x.Get("not_exists")
+	_, err := client.Get("not_exists")
 	assert.Error(t, err)
-	result, err := x.Get("system")
+	result, err := client.Get("system")
 	assert.Nil(t, err)
 	t.Log(result)
 }
@@ -97,7 +96,7 @@ func TestTransfer_Publish(t *testing.T) {
 		assert.Equal(t, now.UnixNano(), payload.Time.UnixNano())
 		wg.Done()
 	})
-	err := x.Publish(context.TODO(), "system", transfer.Payload{
+	err := client.Publish(context.TODO(), "system", transfer.Payload{
 		Tags: map[string]string{
 			"uuid": "0ff5483a-7ddc-44e0-b723-c3417988663f",
 		},
@@ -113,6 +112,6 @@ func TestTransfer_Publish(t *testing.T) {
 }
 
 func TestTransfer_Remove(t *testing.T) {
-	err := x.Remove("system")
+	err := client.Remove("system")
 	assert.Nil(t, err)
 }

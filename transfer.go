@@ -32,13 +32,13 @@ func New(namespace string, js nats.JetStreamContext) (x *Transfer, err error) {
 }
 
 type Option struct {
-	// 主题
+	// 度量
 	Measurement string `json:"measurement"`
 	// 描述
 	Description string `json:"description"`
 }
 
-// Get 获取传输器信息
+// Get 获取日志流传输信息，JetStream 状态
 func (x *Transfer) Get(measurement string) (data map[string]interface{}, err error) {
 	data = make(map[string]interface{})
 	var b []byte
@@ -59,7 +59,7 @@ func (x *Transfer) Get(measurement string) (data map[string]interface{}, err err
 	return
 }
 
-// Set 设置传输器
+// Set 设置日志流传输
 func (x *Transfer) Set(option Option) (err error) {
 	var b []byte
 	if b, err = sonic.Marshal(option); err != nil {
@@ -81,7 +81,7 @@ func (x *Transfer) Set(option Option) (err error) {
 	return
 }
 
-// Remove 移除配置
+// Remove 移除日志流传输
 func (x *Transfer) Remove(measurement string) (err error) {
 	if err = x.Store.Delete(measurement); err != nil {
 		return
