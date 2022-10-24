@@ -21,3 +21,11 @@ services:
       - "./nats-3.conf:/etc/nats.conf"
     ports:
       - "4224:4222"
+  mongodb:
+    image: percona/percona-server-mongodb:5.0
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: super
+      MONGO_INITDB_ROOT_PASSWORD: 123456
+    ports:
+      - "27017:27017"

@@ -26,6 +26,7 @@ jobs:
           GO111MODULE: on
           HOSTS: nats://127.0.0.1:4222,nats://127.0.0.1:4223,nats://127.0.0.1:4224
           TOKEN: s3cr3t
+          DATABASE: mongodb://super:123456@localhost:27017/admin
 
       - name: 推送覆盖率至 COVERALLS
         run: |

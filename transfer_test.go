@@ -7,6 +7,9 @@ import (
 	"github.com/nats-io/nkeys"
 	"github.com/stretchr/testify/assert"
 	"github.com/weplanx/transfer"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"log"
 	"os"
 	"sync"
 	"testing"
@@ -19,6 +22,7 @@ import (
 
 var client *transfer.Transfer
 var js nats.JetStreamContext
+var mclient *mongo.Client
 
 func TestMain(m *testing.M) {
 	var err error
@@ -57,16 +61,23 @@ func TestMain(m *testing.M) {
 	if js, err = nc.JetStream(nats.PublishAsyncMaxPending(256)); err != nil {
 		panic(err)
 	}
-	if client, err = transfer.New("test", js); err != nil {
+	if mclient, err = mongo.Connect(context.TODO(),
+		options.Client().ApplyURI(os.Getenv("DATABASE")),
+	); err != nil {
+		log.Fatalln(err)
+	}
+
+	if client, err = transfer.New("test", mclient.Database("development"), js); err != nil {
 		panic(err)
 	}
 	os.Exit(m.Run())
 }
 
 func TestTransfer_Set(t *testing.T) {
-	err := client.Set(transfer.Option{
-		Measurement: "system",
+	err := client.Set(context.TODO(), transfer.Option{
+		Key:         "system",
 		Description: "测试",
+		TTL:         3600,
 	})
 	assert.Nil(t, err)
 }
@@ -91,21 +102,19 @@ func TestTransfer_Publish(t *testing.T) {
 			t.Error(err)
 		}
 		t.Log(payload)
-		assert.Equal(t, "0ff5483a-7ddc-44e0-b723-c3417988663f", payload.Tags["uuid"])
-		assert.Equal(t, map[string]interface{}{"msg": "hi"}, payload.Fields["data"])
-		assert.Equal(t, now.UnixNano(), payload.Time.UnixNano())
+		assert.Equal(t, "0ff5483a-7ddc-44e0-b723-c3417988663f", payload.Metadata["uuid"])
+		assert.Equal(t, map[string]interface{}{"msg": "hi"}, payload.Data)
+		assert.Equal(t, now.UnixNano(), payload.Timestamp.UnixNano())
 		wg.Done()
 	})
 	err := client.Publish(context.TODO(), "system", transfer.Payload{
-		Tags: map[string]string{
+		Metadata: map[string]interface{}{
 			"uuid": "0ff5483a-7ddc-44e0-b723-c3417988663f",
 		},
-		Fields: map[string]interface{}{
-			"data": map[string]interface{}{
-				"msg": "hi",
-			},
+		Data: map[string]interface{}{
+			"msg": "hi",
 		},
-		Time: now,
+		Timestamp: now,
 	})
 	assert.Nil(t, err)
 	wg.Wait()

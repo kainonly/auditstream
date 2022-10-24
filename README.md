@@ -7,9 +7,9 @@
 [![Release](https://img.shields.io/github/v/release/weplanx/transfer.svg?style=flat-square)](https://github.com/weplanx/transfer)
 [![GitHub license](https://img.shields.io/github/license/weplanx/transfer?style=flat-square)](https://raw.githubusercontent.com/weplanx/transfer/main/LICENSE)
 
-日志传输客户端是以 Push 为主的模式，作用是对日志流队列进行统一管理，将高频写入的日志数据进行削峰缓冲，同时填补非高可用日志系统的可靠性，配合相同命名空间的日志采集服务写入日志系统
-
-- 技术文档：[语雀](https://www.yuque.com/kainonly/weplanx/transfer)
+The log transmission client is based on the push mode. Its function is to manage the log stream queues in a unified manner, to cut and buffer the log data written at high frequency, and to supplement the reliability of the non-highly available log system. It works with the same namespace. The log collection service of the log collection service writes to the log system
+ 
+- Documentation：[Yuque](https://www.yuque.com/kainonly/weplanx/transfer)
 
 ## License
 

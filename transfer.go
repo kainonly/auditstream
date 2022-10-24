@@ -5,25 +5,26 @@ import (
 	"fmt"
 	"github.com/bytedance/sonic"
 	"github.com/nats-io/nats.go"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"time"
 )
 
 type Transfer struct {
-	// 命名空间
 	Namespace string
-	// Nats JetStream
-	Js nats.JetStreamContext
-	// Nats ObjectStore
-	Store nats.ObjectStore
+	Db        *mongo.Database
+	JetStream nats.JetStreamContext
+	KeyValue  nats.KeyValue
 }
 
 // New 新建传输
-func New(namespace string, js nats.JetStreamContext) (x *Transfer, err error) {
+func New(namespace string, db *mongo.Database, js nats.JetStreamContext) (x *Transfer, err error) {
 	x = &Transfer{
 		Namespace: namespace,
-		Js:        js,
+		Db:        db,
+		JetStream: js,
 	}
-	if x.Store, err = js.CreateObjectStore(&nats.ObjectStoreConfig{
+	if x.KeyValue, err = js.CreateKeyValue(&nats.KeyValueConfig{
 		Bucket: fmt.Sprintf(`%s_logs`, namespace),
 	}); err != nil {
 		return
@@ -32,84 +33,95 @@ func New(namespace string, js nats.JetStreamContext) (x *Transfer, err error) {
 }
 
 type Option struct {
-	// 度量
-	Measurement string `json:"measurement"`
+	// 日志标识
+	Key string `json:"key"`
 	// 描述
 	Description string `json:"description"`
+	// 有效期
+	TTL int64 `json:"ttl"`
 }
 
 // Get 获取日志流传输信息，JetStream 状态
-func (x *Transfer) Get(measurement string) (data map[string]interface{}, err error) {
-	data = make(map[string]interface{})
-	var b []byte
-	if b, err = x.Store.GetBytes(measurement); err != nil {
+func (x *Transfer) Get(key string) (result map[string]interface{}, err error) {
+	result = make(map[string]interface{})
+	var entry nats.KeyValueEntry
+	if entry, err = x.KeyValue.Get(key); err != nil {
 		return
 	}
 	var option Option
-	if err = sonic.Unmarshal(b, &option); err != nil {
+	if err = sonic.Unmarshal(entry.Value(), &option); err != nil {
 		return
 	}
-	data["option"] = option
-	name := fmt.Sprintf(`%s:logs:%s`, x.Namespace, measurement)
+	result["option"] = option
+	name := fmt.Sprintf(`%s:logs:%s`, x.Namespace, key)
 	var info *nats.StreamInfo
-	if info, err = x.Js.StreamInfo(name); err != nil {
+	if info, err = x.JetStream.StreamInfo(name); err != nil {
 		return
 	}
-	data["info"] = *info
+	result["info"] = *info
 	return
 }
 
 // Set 设置日志流传输
-func (x *Transfer) Set(option Option) (err error) {
+func (x *Transfer) Set(ctx context.Context, option Option) (err error) {
 	var b []byte
 	if b, err = sonic.Marshal(option); err != nil {
 		return
 	}
-	if _, err = x.Store.PutBytes(option.Measurement, b); err != nil {
+	if _, err = x.KeyValue.Put(option.Key, b); err != nil {
 		return
 	}
-	name := fmt.Sprintf(`%s:logs:%s`, x.Namespace, option.Measurement)
-	subject := fmt.Sprintf(`%s.logs.%s`, x.Namespace, option.Measurement)
-	if _, err = x.Js.AddStream(&nats.StreamConfig{
+	coll := fmt.Sprintf(`%s_logs`, option.Key)
+	if err = x.Db.CreateCollection(ctx, coll, options.CreateCollection().
+		SetTimeSeriesOptions(
+			options.TimeSeries().
+				SetMetaField("metadata").
+				SetTimeField("timestamp"),
+		).SetExpireAfterSeconds(option.TTL)); err != nil {
+		return
+	}
+	name := fmt.Sprintf(`%s:logs:%s`, x.Namespace, option.Key)
+	subject := fmt.Sprintf(`%s.logs.%s`, x.Namespace, option.Key)
+	if _, err = x.JetStream.AddStream(&nats.StreamConfig{
 		Name:        name,
 		Subjects:    []string{subject},
 		Description: option.Description,
 		Retention:   nats.WorkQueuePolicy,
-	}); err != nil {
+	}, nats.Context(ctx)); err != nil {
+		if err = x.Db.Collection(coll).Drop(ctx); err != nil {
+			return
+		}
 		return
 	}
 	return
 }
 
 // Remove 移除日志流传输
-func (x *Transfer) Remove(measurement string) (err error) {
-	if err = x.Store.Delete(measurement); err != nil {
+func (x *Transfer) Remove(key string) (err error) {
+	if err = x.KeyValue.Delete(key); err != nil {
 		return
 	}
-	name := fmt.Sprintf(`%s:logs:%s`, x.Namespace, measurement)
-	return x.Js.DeleteStream(name)
+	name := fmt.Sprintf(`%s:logs:%s`, x.Namespace, key)
+	return x.JetStream.DeleteStream(name)
 }
 
-// Payload 载荷
 type Payload struct {
-	// 标签
-	Tags map[string]string `json:"tags"`
-
-	// 字段
-	Fields map[string]interface{} `json:"fields"`
-
+	// 元数据
+	Metadata map[string]interface{} `bson:"metadata" json:"metadata"`
+	// 日志
+	Data map[string]interface{} `bson:"data" json:"data"`
 	// 时间
-	Time time.Time `json:"time"`
+	Timestamp time.Time `bson:"timestamp" json:"timestamp"`
 }
 
 // Publish 发布
-func (x *Transfer) Publish(ctx context.Context, measurement string, payload Payload) (err error) {
+func (x *Transfer) Publish(ctx context.Context, key string, payload Payload) (err error) {
 	var b []byte
 	if b, err = sonic.Marshal(payload); err != nil {
 		return
 	}
-	subject := fmt.Sprintf(`%s.logs.%s`, x.Namespace, measurement)
-	if _, err = x.Js.Publish(subject, b, nats.Context(ctx)); err != nil {
+	subject := fmt.Sprintf(`%s.logs.%s`, x.Namespace, key)
+	if _, err = x.JetStream.Publish(subject, b, nats.Context(ctx)); err != nil {
 		return
 	}
 	return
