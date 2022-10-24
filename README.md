@@ -11,8 +11,6 @@ The log transmission client is based on the push mode. Its function is to manage
  
 - Documentation：[Yuque](https://www.yuque.com/kainonly/weplanx/transfer)
 
-![](/yuque_diagram.jpg)
-
 ## License
 
 [BSD-3-Clause License](https://github.com/weplanx/transfer/blob/main/LICENSE)
