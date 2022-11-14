@@ -67,14 +67,19 @@ func TestMain(m *testing.M) {
 		log.Fatalln(err)
 	}
 
-	if client, err = transfer.New("test", mclient.Database("development"), js); err != nil {
+	if client, err = transfer.New(
+		transfer.SetNamespace("test"),
+		transfer.SetDatabase(mclient.Database("development")),
+		transfer.SetJetStream(js),
+	); err != nil {
 		panic(err)
 	}
+
 	os.Exit(m.Run())
 }
 
 func TestTransfer_Set(t *testing.T) {
-	err := client.Set(context.TODO(), transfer.Option{
+	err := client.Set(context.TODO(), transfer.LogOption{
 		Key:         "system",
 		Description: "测试",
 		TTL:         3600,

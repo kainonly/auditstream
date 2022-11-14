@@ -14,26 +14,45 @@ import (
 type Transfer struct {
 	Namespace string
 	Db        *mongo.Database
-	JetStream nats.JetStreamContext
+	Js        nats.JetStreamContext
 	KeyValue  nats.KeyValue
 }
 
 // New 新建传输
-func New(namespace string, db *mongo.Database, js nats.JetStreamContext) (x *Transfer, err error) {
-	x = &Transfer{
-		Namespace: namespace,
-		Db:        db,
-		JetStream: js,
+func New(options ...Option) (x *Transfer, err error) {
+	x = new(Transfer)
+	for _, v := range options {
+		v(x)
 	}
-	if x.KeyValue, err = js.CreateKeyValue(&nats.KeyValueConfig{
-		Bucket: fmt.Sprintf(`%s_logs`, namespace),
+	if x.KeyValue, err = x.Js.CreateKeyValue(&nats.KeyValueConfig{
+		Bucket: fmt.Sprintf(`%s_logs`, x.Namespace),
 	}); err != nil {
 		return
 	}
 	return
 }
 
-type Option struct {
+type Option func(x *Transfer)
+
+func SetNamespace(v string) Option {
+	return func(x *Transfer) {
+		x.Namespace = v
+	}
+}
+
+func SetDatabase(v *mongo.Database) Option {
+	return func(x *Transfer) {
+		x.Db = v
+	}
+}
+
+func SetJetStream(v nats.JetStreamContext) Option {
+	return func(x *Transfer) {
+		x.Js = v
+	}
+}
+
+type LogOption struct {
 	// 日志标识
 	Key string `json:"key"`
 	// 描述
@@ -49,14 +68,14 @@ func (x *Transfer) Get(key string) (result map[string]interface{}, err error) {
 	if entry, err = x.KeyValue.Get(key); err != nil {
 		return
 	}
-	var option Option
+	var option LogOption
 	if err = sonic.Unmarshal(entry.Value(), &option); err != nil {
 		return
 	}
 	result["option"] = option
 	name := fmt.Sprintf(`%s:logs:%s`, x.Namespace, key)
 	var info *nats.StreamInfo
-	if info, err = x.JetStream.StreamInfo(name); err != nil {
+	if info, err = x.Js.StreamInfo(name); err != nil {
 		return
 	}
 	result["info"] = *info
@@ -64,7 +83,7 @@ func (x *Transfer) Get(key string) (result map[string]interface{}, err error) {
 }
 
 // Set 设置日志流传输
-func (x *Transfer) Set(ctx context.Context, option Option) (err error) {
+func (x *Transfer) Set(ctx context.Context, option LogOption) (err error) {
 	var b []byte
 	if b, err = sonic.Marshal(option); err != nil {
 		return
@@ -96,7 +115,7 @@ func (x *Transfer) Set(ctx context.Context, option Option) (err error) {
 
 	name := fmt.Sprintf(`%s:logs:%s`, x.Namespace, option.Key)
 	subject := fmt.Sprintf(`%s.logs.%s`, x.Namespace, option.Key)
-	if _, err = x.JetStream.AddStream(&nats.StreamConfig{
+	if _, err = x.Js.AddStream(&nats.StreamConfig{
 		Name:        name,
 		Subjects:    []string{subject},
 		Description: option.Description,
@@ -117,7 +136,7 @@ func (x *Transfer) Remove(key string) (err error) {
 		return
 	}
 	name := fmt.Sprintf(`%s:logs:%s`, x.Namespace, key)
-	return x.JetStream.DeleteStream(name)
+	return x.Js.DeleteStream(name)
 }
 
 type Payload struct {
@@ -136,7 +155,7 @@ func (x *Transfer) Publish(ctx context.Context, key string, payload Payload) (er
 		return
 	}
 	subject := fmt.Sprintf(`%s.logs.%s`, x.Namespace, key)
-	if _, err = x.JetStream.Publish(subject, b, nats.Context(ctx)); err != nil {
+	if _, err = x.Js.Publish(subject, b, nats.Context(ctx)); err != nil {
 		return
 	}
 	return
