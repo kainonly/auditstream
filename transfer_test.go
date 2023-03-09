@@ -2,14 +2,11 @@ package transfer_test
 
 import (
 	"fmt"
-	"github.com/bytedance/sonic"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nkeys"
 	"github.com/stretchr/testify/assert"
+	"github.com/vmihailenco/msgpack/v5"
 	"github.com/weplanx/transfer"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
-	"log"
 	"os"
 	"sync"
 	"testing"
@@ -22,7 +19,6 @@ import (
 
 var client *transfer.Transfer
 var js nats.JetStreamContext
-var mclient *mongo.Client
 
 func TestMain(m *testing.M) {
 	var err error
@@ -61,15 +57,8 @@ func TestMain(m *testing.M) {
 	if js, err = nc.JetStream(nats.PublishAsyncMaxPending(256)); err != nil {
 		panic(err)
 	}
-	if mclient, err = mongo.Connect(context.TODO(),
-		options.Client().ApplyURI(os.Getenv("DATABASE")),
-	); err != nil {
-		log.Fatalln(err)
-	}
-
 	if client, err = transfer.New(
-		transfer.SetNamespace("test"),
-		transfer.SetDatabase(mclient.Database("development")),
+		transfer.SetNamespace("beta"),
 		transfer.SetJetStream(js),
 	); err != nil {
 		panic(err)
@@ -81,8 +70,7 @@ func TestMain(m *testing.M) {
 func TestTransfer_Set(t *testing.T) {
 	err := client.Set(context.TODO(), transfer.LogOption{
 		Key:         "system",
-		Description: "测试",
-		TTL:         3600,
+		Description: "system beta",
 	})
 	assert.Nil(t, err)
 }
@@ -98,12 +86,12 @@ func TestTransfer_Get(t *testing.T) {
 func TestTransfer_Publish(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(1)
-	subject := fmt.Sprintf(`%s.logs.%s`, "test", "system")
-	queue := fmt.Sprintf(`%s:logs:%s`, "test", "system")
+	subjectName := fmt.Sprintf(`%s.logs.%s`, "beta", "system")
+	queueName := fmt.Sprintf(`%s:logs:%s`, "beta", "system")
 	now := time.Now()
-	go js.QueueSubscribe(subject, queue, func(msg *nats.Msg) {
+	go js.QueueSubscribe(subjectName, queueName, func(msg *nats.Msg) {
 		var payload transfer.Payload
-		if err := sonic.Unmarshal(msg.Data, &payload); err != nil {
+		if err := msgpack.Unmarshal(msg.Data, &payload); err != nil {
 			t.Error(err)
 		}
 		t.Log(payload)
@@ -121,7 +109,7 @@ func TestTransfer_Publish(t *testing.T) {
 		},
 		Timestamp: now,
 	})
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	wg.Wait()
 }
 
