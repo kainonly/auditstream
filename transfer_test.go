@@ -113,6 +113,20 @@ func TestTransfer_Publish(t *testing.T) {
 	wg.Wait()
 }
 
+//func TestTransfer_ManualPublish(t *testing.T) {
+//	now := time.Now()
+//	err := client.Publish(context.TODO(), "system", transfer.Payload{
+//		Metadata: map[string]interface{}{
+//			"id": 1,
+//		},
+//		Data: map[string]interface{}{
+//			"msg": "123456",
+//		},
+//		Timestamp: now,
+//	})
+//	assert.NoError(t, err)
+//}
+
 func TestTransfer_Remove(t *testing.T) {
 	err := client.Remove("system")
 	assert.Nil(t, err)
