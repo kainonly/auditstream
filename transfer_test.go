@@ -70,7 +70,7 @@ func TestMain(m *testing.M) {
 func TestTransfer_Set(t *testing.T) {
 	err := client.Set(context.TODO(), transfer.LogOption{
 		Key:         "system",
-		Description: "system beta",
+		Description: "system example",
 	})
 	assert.Nil(t, err)
 }
@@ -86,25 +86,25 @@ func TestTransfer_Get(t *testing.T) {
 func TestTransfer_Publish(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(1)
-	subjectName := fmt.Sprintf(`%s.logs.%s`, "beta", "system")
-	queueName := fmt.Sprintf(`%s:logs:%s`, "beta", "system")
+	subjectName := fmt.Sprintf(`%s.logs.%s`, "example", "system")
+	queueName := fmt.Sprintf(`%s:logs:%s`, "example", "system")
 	now := time.Now()
+	data := map[string]interface{}{
+		"uuid": "0ff5483a-7ddc-44e0-b723-c3417988663f",
+		"msg":  "hi",
+	}
 	go js.QueueSubscribe(subjectName, queueName, func(msg *nats.Msg) {
 		var payload transfer.Payload
 		if err := msgpack.Unmarshal(msg.Data, &payload); err != nil {
 			t.Error(err)
 		}
 		t.Log(payload)
-		assert.Equal(t, "0ff5483a-7ddc-44e0-b723-c3417988663f", payload.Data["uuid"])
-		assert.Equal(t, map[string]interface{}{"msg": "hi"}, payload.Data)
+		assert.Equal(t, data, payload.Data)
 		assert.Equal(t, now.UnixNano(), payload.Timestamp.UnixNano())
 		wg.Done()
 	})
 	err := client.Publish(context.TODO(), "system", transfer.Payload{
-		Data: map[string]interface{}{
-			"uuid": "0ff5483a-7ddc-44e0-b723-c3417988663f",
-			"msg":  "hi",
-		},
+		Data:      data,
 		Timestamp: now,
 	})
 	assert.NoError(t, err)
