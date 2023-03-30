@@ -37,7 +37,7 @@ func TestMain(m *testing.M) {
 			return
 		}
 		if !nkeys.IsValidPublicUserKey(pub) {
-			panic("nkey 验证失败")
+			panic("nkey is invalid")
 		}
 		auth = nats.Nkey(pub, func(nonce []byte) ([]byte, error) {
 			sig, _ := kp.Sign(nonce)
@@ -58,7 +58,7 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 	if client, err = transfer.New(
-		transfer.SetNamespace("beta"),
+		transfer.SetNamespace("example"),
 		transfer.SetJetStream(js),
 	); err != nil {
 		panic(err)
@@ -95,17 +95,15 @@ func TestTransfer_Publish(t *testing.T) {
 			t.Error(err)
 		}
 		t.Log(payload)
-		assert.Equal(t, "0ff5483a-7ddc-44e0-b723-c3417988663f", payload.Metadata["uuid"])
+		assert.Equal(t, "0ff5483a-7ddc-44e0-b723-c3417988663f", payload.Data["uuid"])
 		assert.Equal(t, map[string]interface{}{"msg": "hi"}, payload.Data)
 		assert.Equal(t, now.UnixNano(), payload.Timestamp.UnixNano())
 		wg.Done()
 	})
 	err := client.Publish(context.TODO(), "system", transfer.Payload{
-		Metadata: map[string]interface{}{
-			"uuid": "0ff5483a-7ddc-44e0-b723-c3417988663f",
-		},
 		Data: map[string]interface{}{
-			"msg": "hi",
+			"uuid": "0ff5483a-7ddc-44e0-b723-c3417988663f",
+			"msg":  "hi",
 		},
 		Timestamp: now,
 	})
@@ -116,13 +114,16 @@ func TestTransfer_Publish(t *testing.T) {
 //func TestTransfer_ManualPublish(t *testing.T) {
 //	now := time.Now()
 //	err := client.Publish(context.TODO(), "system", transfer.Payload{
-//		Metadata: map[string]interface{}{
-//			"id": 1,
-//		},
+//		Timestamp: now,
 //		Data: map[string]interface{}{
+//			"metadata": map[string]interface{}{
+//				"user_id": "640e7c2c7d8a24d6f831e9bf",
+//			},
 //			"msg": "123456",
 //		},
-//		Timestamp: now,
+//		Format: map[string]interface{}{
+//			"metadata.user_id": "oid",
+//		},
 //	})
 //	assert.NoError(t, err)
 //}

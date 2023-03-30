@@ -98,9 +98,9 @@ func (x *Transfer) Remove(key string) (err error) {
 }
 
 type Payload struct {
-	Metadata  map[string]interface{} `msgpack:"metadata"`
-	Data      map[string]interface{} `msgpack:"data"`
 	Timestamp time.Time              `msgpack:"timestamp"`
+	Data      map[string]interface{} `msgpack:"data"`
+	Format    map[string]interface{} `msgpack:"format"`
 }
 
 func (x *Transfer) Publish(ctx context.Context, key string, payload Payload) (err error) {
