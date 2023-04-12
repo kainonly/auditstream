@@ -77,7 +77,32 @@ func (x *Transfer) Set(ctx context.Context, option LogOption) (err error) {
 
 	name := fmt.Sprintf(`%s:logs:%s`, x.Namespace, option.Key)
 	subject := fmt.Sprintf(`%s.logs.%s`, x.Namespace, option.Key)
+
 	if _, err = x.Js.AddStream(&nats.StreamConfig{
+		Name:        name,
+		Subjects:    []string{subject},
+		Description: option.Description,
+		Retention:   nats.WorkQueuePolicy,
+	}, nats.Context(ctx)); err != nil {
+		return
+	}
+
+	return
+}
+
+func (x *Transfer) Update(ctx context.Context, option LogOption) (err error) {
+	var b []byte
+	if b, err = msgpack.Marshal(option); err != nil {
+		return
+	}
+	if _, err = x.KeyValue.Put(option.Key, b); err != nil {
+		return
+	}
+
+	name := fmt.Sprintf(`%s:logs:%s`, x.Namespace, option.Key)
+	subject := fmt.Sprintf(`%s.logs.%s`, x.Namespace, option.Key)
+
+	if _, err = x.Js.UpdateStream(&nats.StreamConfig{
 		Name:        name,
 		Subjects:    []string{subject},
 		Description: option.Description,

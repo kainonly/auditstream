@@ -75,6 +75,14 @@ func TestTransfer_Set(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+func TestTransfer_Update(t *testing.T) {
+	err := client.Update(context.TODO(), transfer.LogOption{
+		Key:         "system",
+		Description: "system example 123",
+	})
+	assert.Nil(t, err)
+}
+
 func TestTransfer_Get(t *testing.T) {
 	_, err := client.Get("not_exists")
 	assert.Error(t, err)
@@ -118,6 +126,23 @@ func TestTransfer_Publish(t *testing.T) {
 //		Data: map[string]interface{}{
 //			"metadata": map[string]interface{}{
 //				"user_id": "640e7c2c7d8a24d6f831e9bf",
+//			},
+//			"msg": "123456",
+//		},
+//		Format: map[string]interface{}{
+//			"metadata.user_id": "oid",
+//		},
+//	})
+//	assert.NoError(t, err)
+//}
+
+//func TestTransfer_ManualPublishNone(t *testing.T) {
+//	now := time.Now()
+//	err := client.Publish(context.TODO(), "system", transfer.Payload{
+//		Timestamp: now,
+//		Data: map[string]interface{}{
+//			"metadata": map[string]interface{}{
+//				"user_id": "",
 //			},
 //			"msg": "123456",
 //		},
