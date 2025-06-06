@@ -1,14 +1,15 @@
-# Weplanx PPCollector (Periodic Polling Collector)
+# Weplanx Collector Clickhouse (DEV)
 
-[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/weplanx/ppcollector/release.yml?label=release&style=flat-square)](https://github.com/weplanx/ppcollector/actions/workflows/release.yml)
-[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/weplanx/ppcollector/testing.yml?label=testing&style=flat-square)](https://github.com/weplanx/ppcollector/actions/workflows/testing.yml)
-[![Release](https://img.shields.io/github/v/release/weplanx/ppcollector.svg?style=flat-square&include_prereleases)](https://github.com/weplanx/ppcollector/releases)
-[![Coveralls github](https://img.shields.io/coveralls/github/weplanx/ppcollector.svg?style=flat-square)](https://coveralls.io/github/weplanx/ppcollector)
-[![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/weplanx/ppcollector?style=flat-square)](https://github.com/weplanx/ppcollector)
-[![Go Report Card](https://goreportcard.com/badge/github.com/weplanx/ppcollector?style=flat-square)](https://goreportcard.com/report/github.com/weplanx/ppcollector)
-[![GitHub license](https://img.shields.io/github/license/weplanx/ppcollector?style=flat-square)](https://raw.githubusercontent.com/weplanx/ppcollector/main/LICENSE)
+[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/weplanx/collector-clickhouse/release.yml?label=release&style=flat-square)](https://github.com/weplanx/collector-clickhouse/actions/workflows/release.yml)
+[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/weplanx/collector-clickhouse/testing.yml?label=testing&style=flat-square)](https://github.com/weplanx/collector-clickhouse/actions/workflows/testing.yml)
+[![Release](https://img.shields.io/github/v/release/weplanx/collector-clickhouse.svg?style=flat-square&include_prereleases)](https://github.com/weplanx/collector-clickhouse/releases)
+[![Coveralls github](https://img.shields.io/coveralls/github/weplanx/collector-clickhouse.svg?style=flat-square)](https://coveralls.io/github/weplanx/collector-clickhouse)
+[![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/weplanx/collector-clickhouse?style=flat-square)](https://github.com/weplanx/collector-clickhouse)
+[![Go Report Card](https://goreportcard.com/badge/github.com/weplanx/collector-clickhouse?style=flat-square)](https://goreportcard.com/report/github.com/weplanx/collector-clickhouse)
+[![GitHub license](https://img.shields.io/github/license/weplanx/collector-clickhouse?style=flat-square)](https://raw.githubusercontent.com/weplanx/collector-clickhouse/main/LICENSE)
 
-A streamlined, professional queue-based data collector tailored for ClickHouse time-series storage, designed to leverage periodic polling for efficient batch writes from the queue.
+A streamlined, professional queue-based data collector tailored for ClickHouse time-series storage, designed to leverage
+periodic polling for efficient batch writes from the queue.
 
 ## Pre-requisite
 
@@ -22,7 +23,7 @@ A collector service that subscribes to stream queues and then writes to data.
 
 The main container image is:
 
-- ghcr.io/weplanx/ppcollector:latest
+- ghcr.io/weplanx/collector-clickhouse:latest
 
 The case will use Kubernetes deployment orchestration, replicate deployment (modify as needed).
 
@@ -41,9 +42,9 @@ spec:
         app: ppcollector
     spec:
       containers:
-        - image: ghcr.io/weplanx/ppcollector:latest
+        - image: ghcr.io/weplanx/collector-clickhouse:latest
           imagePullPolicy: Always
-          name: ppcollector
+          name: collector-clickhouse
 ```
 
 ## License

@@ -5,7 +5,7 @@ import (
 	"github.com/go-co-op/gocron/v2"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
-	"github.com/weplanx/ppcollector/v3/common"
+	"github.com/weplanx/collector-clickhouse/v3/common"
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
 	"os"

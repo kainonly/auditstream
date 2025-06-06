@@ -3,7 +3,7 @@ package app
 import (
 	"fmt"
 	"github.com/nats-io/nats.go/jetstream"
-	"github.com/weplanx/ppcollector/v3/common"
+	"github.com/weplanx/collector-clickhouse/v3/common"
 	"sync"
 )
 

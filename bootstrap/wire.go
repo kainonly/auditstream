@@ -5,8 +5,8 @@ package bootstrap
 
 import (
 	"github.com/google/wire"
-	"github.com/weplanx/ppcollector/v3/app"
-	"github.com/weplanx/ppcollector/v3/common"
+	"github.com/weplanx/collector-clickhouse/v3/app"
+	"github.com/weplanx/collector-clickhouse/v3/common"
 )
 
 func NewApp() (*app.App, error) {
