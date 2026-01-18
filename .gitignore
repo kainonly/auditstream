@@ -21,4 +21,12 @@
 !.vscode/launch.json
 !.vscode/extensions.json
 
+# Go build files
+*.exe
+*.exe~
+*.out
+
+# Log files
+*.log
+
 values.yml
