@@ -1,15 +1,19 @@
 package bootstrap
 
 import (
-	"github.com/ClickHouse/clickhouse-go/v2"
-	"github.com/go-co-op/gocron/v2"
-	"github.com/nats-io/nats.go"
-	"github.com/nats-io/nats.go/jetstream"
-	"github.com/weplanx/collector-clickhouse/v3/common"
-	"go.uber.org/zap"
-	"gopkg.in/yaml.v3"
+	"context"
 	"os"
 	"strings"
+
+	"github.com/go-co-op/gocron/v2"
+	"github.com/kainonly/collector/v3/common"
+	"github.com/nats-io/nats.go"
+	"github.com/nats-io/nats.go/jetstream"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
+	"go.mongodb.org/mongo-driver/v2/mongo/writeconcern"
+	"go.uber.org/zap"
+	"gopkg.in/yaml.v3"
 )
 
 func SetZap() (log *zap.Logger, err error) {
@@ -25,6 +29,7 @@ func SetZap() (log *zap.Logger, err error) {
 	return
 }
 
+// LoadStaticValues loads configuration from ./config/values.yml.
 func LoadStaticValues() (v *common.Values, err error) {
 	v = new(common.Values)
 	var b []byte
@@ -37,6 +42,14 @@ func LoadStaticValues() (v *common.Values, err error) {
 	return
 }
 
+// UseMongo creates a MongoDB client.
+func UseMongo(v *common.Values) (*mongo.Client, error) {
+	return mongo.Connect(
+		options.Client().ApplyURI(v.Database.Url),
+	)
+}
+
+// UseNats creates a NATS connection with infinite reconnect attempts.
 func UseNats(values *common.Values) (nc *nats.Conn, err error) {
 	if nc, err = nats.Connect(
 		strings.Join(values.Nats.Hosts, ","),
@@ -49,33 +62,49 @@ func UseNats(values *common.Values) (nc *nats.Conn, err error) {
 	return
 }
 
+// UseJetStream creates a JetStream context.
 func UseJetStream(nc *nats.Conn) (jetstream.JetStream, error) {
 	return jetstream.New(nc)
 }
 
-func UseKeyValue(values *common.Values, js nats.JetStreamContext) (nats.KeyValue, error) {
-	return js.CreateKeyValue(&nats.KeyValueConfig{
+// UseKeyValue creates or updates the namespace KV bucket used for stream configuration.
+func UseKeyValue(values *common.Values, js jetstream.JetStream) (jetstream.KeyValue, error) {
+	return js.CreateOrUpdateKeyValue(context.TODO(), jetstream.KeyValueConfig{
 		Bucket:      values.Namespace,
 		Description: values.Description,
+		History:     3,
+		Compression: true,
 	})
 }
 
-func UseDatabase(v *common.Values) (conn clickhouse.Conn, err error) {
-	return clickhouse.Open(&clickhouse.Options{
-		Protocol: 0,
-		Addr:     v.Database.Addr,
-		Auth: clickhouse.Auth{
-			Database: v.Database.Auth.Database,
-			Username: v.Database.Auth.Username,
-			Password: v.Database.Auth.Password,
-		},
-		Compression: &clickhouse.Compression{
-			Method: clickhouse.CompressionLZ4,
-		},
-		MaxIdleConns: v.Database.MaxIdleConns,
-	})
+// UseDatabase returns a database handle with majority write concern.
+func UseDatabase(v *common.Values, client *mongo.Client) (db *mongo.Database) {
+	option := options.Database().
+		SetWriteConcern(writeconcern.Majority())
+	return client.Database(v.Database.Name, option)
 }
 
+// UseSchedule creates a scheduler instance.
 func UseSchedule() (gocron.Scheduler, error) {
 	return gocron.NewScheduler()
+}
+
+func NewInject(
+	v *common.Values,
+	nc *nats.Conn,
+	js jetstream.JetStream,
+	kv jetstream.KeyValue,
+	mc *mongo.Client,
+	db *mongo.Database,
+	schedule gocron.Scheduler,
+) *common.Inject {
+	return &common.Inject{
+		V:        v,
+		Nc:       nc,
+		Js:       js,
+		Kv:       kv,
+		Mc:       mc,
+		Db:       db,
+		Schedule: schedule,
+	}
 }
