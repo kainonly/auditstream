@@ -10,7 +10,6 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
-	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 type Transfer struct {
@@ -109,10 +108,9 @@ func (x *Transfer) Add(ctx context.Context, option Option) (err error) {
 	return
 }
 
-// Send publishes a BSON-encoded payload to the configured subject for key.
 func (x *Transfer) Send(key string, data any) (err error) {
 	var content []byte
-	if content, err = bson.Marshal(data); err != nil {
+	if content, err = sonic.Marshal(data); err != nil {
 		return
 	}
 	if _, err = x.Js.PublishAsync(x.SubName(key), content); err != nil {
