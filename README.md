@@ -1,52 +1,45 @@
-# Weplanx Collector Clickhouse (DEV)
+# AuditStream
 
-[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/weplanx/collector-clickhouse/release.yml?label=release&style=flat-square)](https://github.com/weplanx/collector-clickhouse/actions/workflows/release.yml)
-[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/weplanx/collector-clickhouse/testing.yml?label=testing&style=flat-square)](https://github.com/weplanx/collector-clickhouse/actions/workflows/testing.yml)
-[![Release](https://img.shields.io/github/v/release/weplanx/collector-clickhouse.svg?style=flat-square&include_prereleases)](https://github.com/weplanx/collector-clickhouse/releases)
-[![Coveralls github](https://img.shields.io/coveralls/github/weplanx/collector-clickhouse.svg?style=flat-square)](https://coveralls.io/github/weplanx/collector-clickhouse)
-[![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/weplanx/collector-clickhouse?style=flat-square)](https://github.com/weplanx/collector-clickhouse)
-[![Go Report Card](https://goreportcard.com/badge/github.com/weplanx/collector-clickhouse?style=flat-square)](https://goreportcard.com/report/github.com/weplanx/collector-clickhouse)
-[![GitHub license](https://img.shields.io/github/license/weplanx/collector-clickhouse?style=flat-square)](https://raw.githubusercontent.com/weplanx/collector-clickhouse/main/LICENSE)
+A lightweight service for collecting and persisting audit logs. It consumes audit events from NATS JetStream queues and batch writes them to VictoriaLogs for long-term storage and analysis.
 
-A streamlined, professional queue-based data collector tailored for ClickHouse time-series storage, designed to leverage
-periodic polling for efficient batch writes from the queue.
+## Features
 
-## Pre-requisite
+- Consumes audit logs from NATS JetStream queues
+- Batch writes to VictoriaLogs for efficient storage
+- Dynamic subscription management via KV configuration
+- Periodic polling with configurable intervals
+- Automatic configuration hot-reload
 
-- A NATS JetStream cluster is required.
-- A ClickHouse database is required, with the version as high as possible.
-- The transfer and collector must use the same NATS cluster, and the same application namespace.
+## Prerequisites
 
-## Deploy
+- NATS JetStream cluster
+- VictoriaLogs instance
 
-A collector service that subscribes to stream queues and then writes to data.
+## Configuration
 
-The main container image is:
-
-- ghcr.io/weplanx/collector-clickhouse:latest
-
-The case will use Kubernetes deployment orchestration, replicate deployment (modify as needed).
+Create `config/values.yml`:
 
 ```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: ppcollector
-spec:
-  selector:
-    matchLabels:
-      app: ppcollector
-  template:
-    metadata:
-      labels:
-        app: ppcollector
-    spec:
-      containers:
-        - image: ghcr.io/weplanx/collector-clickhouse:latest
-          imagePullPolicy: Always
-          name: collector-clickhouse
+mode: debug
+namespace: alpha
+duration: 5s
+batch: 1000
+nats_hosts:
+  - nats://127.0.0.1:4222
+nats_token: your-token
+victorialogs: http://localhost:9428
 ```
+
+| Field | Description |
+|-------|-------------|
+| `mode` | `debug` or `release` |
+| `namespace` | Application namespace for stream/KV naming |
+| `duration` | Polling interval for batch consumption |
+| `batch` | Maximum messages per batch |
+| `nats_hosts` | NATS server addresses |
+| `nats_token` | NATS authentication token |
+| `victorialogs` | VictoriaLogs endpoint URL |
 
 ## License
 
-[BSD-3-Clause License](https://github.com/weplanx/ppcollector/blob/main/LICENSE)
+[BSD-3-Clause License](LICENSE)
