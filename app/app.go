@@ -18,16 +18,16 @@ type App struct {
 	Js jetstream.JetStream
 	Kv jetstream.KeyValue
 
-	Consumers *common.ConsumerSyncMap
+	Subs *SubscriptionMap
 }
 
 func New(v *common.Values, nc *nats.Conn, js jetstream.JetStream, kv jetstream.KeyValue) *App {
 	return &App{
-		V:         v,
-		Nc:        nc,
-		Js:        js,
-		Kv:        kv,
-		Consumers: common.NewConsumerSyncMap(),
+		V:    v,
+		Nc:   nc,
+		Js:   js,
+		Kv:   kv,
+		Subs: NewSubscriptionMap(),
 	}
 }
 
@@ -106,5 +106,5 @@ func (x *App) Run(ctx context.Context) (err error) {
 }
 
 func (x *App) Close() {
-	x.Consumers.StopAll()
+	x.Subs.StopAll()
 }

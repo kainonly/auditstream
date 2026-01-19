@@ -14,8 +14,9 @@ type State struct {
 }
 
 func (x *App) LoadState(key string) (b []byte, err error) {
+	sub := x.Subs.Get(key)
 	state := &State{
-		Active: x.Consumers.Get(key) != nil,
+		Active: sub != nil && sub.IsActive(),
 	}
 	return sonic.Marshal(state)
 }

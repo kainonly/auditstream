@@ -6,3 +6,5 @@ nats_hosts:
   - nats://127.0.0.1:1224
 nats_token: s3cr3t
 victoria: http://localhost:9428
+batch_size: 100
+flush_interval: 5s

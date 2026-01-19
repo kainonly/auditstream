@@ -3,12 +3,20 @@ package app
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/kainonly/auditstream/v3/common"
 	"github.com/nats-io/nats.go/jetstream"
 	"go.uber.org/zap"
 )
+
+type Option struct {
+	Key         string   `json:"key"`
+	Subs        []string `json:"subs"`
+	Stream      string   `json:"stream"`
+	Description string   `json:"description"`
+}
 
 func (x *App) StreamName(key string) string {
 	return fmt.Sprintf("%s_%s", x.V.Namespace, key)
@@ -18,18 +26,11 @@ func (x *App) SubName(key string) string {
 	return fmt.Sprintf("%s.%s", x.V.Namespace, key)
 }
 
-type Option struct {
-	Key         string   `json:"key"`
-	Subs        []string `json:"subs"`
-	Stream      string   `json:"stream"`
-	Description string   `json:"description"`
-}
-
 func (x *App) Subscribe(option Option) (err error) {
-	// 如果已存在，先停止旧的消费者
-	if cc := x.Consumers.Get(option.Key); cc != nil {
-		cc.Stop()
-		x.Consumers.Delete(option.Key)
+	// 如果已存在，先停止旧的订阅
+	if sub := x.Subs.Get(option.Key); sub != nil {
+		sub.Stop()
+		x.Subs.Delete(option.Key)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
@@ -41,13 +42,23 @@ func (x *App) Subscribe(option Option) (err error) {
 	}
 
 	var cc jetstream.ConsumeContext
+	sub := &Subscription{
+		option: option,
+		app:    x,
+		buffer: make([]jetstream.Msg, 0, x.V.BatchSize),
+		stopCh: make(chan struct{}),
+	}
+
 	if cc, err = consumer.Consume(func(msg jetstream.Msg) {
-		x.handleMessage(option, msg)
+		sub.Push(msg)
 	}); err != nil {
 		return
 	}
 
-	x.Consumers.Set(option.Key, cc)
+	sub.cc = cc
+	go sub.flushLoop()
+
+	x.Subs.Set(option.Key, sub)
 	common.Log.Info("subscribe ok",
 		zap.String("key", option.Key),
 		zap.String("subject", x.SubName(option.Key)),
@@ -55,27 +66,10 @@ func (x *App) Subscribe(option Option) (err error) {
 	return
 }
 
-func (x *App) handleMessage(option Option, msg jetstream.Msg) {
-	fmt.Println(option)
-
-	if err := msg.Ack(); err != nil {
-		common.Log.Error("ack fail",
-			zap.String("key", option.Key),
-			zap.Error(err),
-		)
-		return
-	}
-
-	common.Log.Debug("message processed",
-		zap.String("key", option.Key),
-		zap.ByteString("data", msg.Data()),
-	)
-}
-
 func (x *App) Unsubscribe(key string) (err error) {
-	if cc := x.Consumers.Get(key); cc != nil {
-		cc.Stop()
-		x.Consumers.Delete(key)
+	if sub := x.Subs.Get(key); sub != nil {
+		sub.Stop()
+		x.Subs.Delete(key)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -89,4 +83,37 @@ func (x *App) Unsubscribe(key string) (err error) {
 		zap.String("key", key),
 	)
 	return
+}
+
+// SubscriptionMap 管理所有订阅
+type SubscriptionMap struct {
+	m sync.Map
+}
+
+func NewSubscriptionMap() *SubscriptionMap {
+	return &SubscriptionMap{}
+}
+
+func (s *SubscriptionMap) Set(key string, sub *Subscription) {
+	s.m.Store(key, sub)
+}
+
+func (s *SubscriptionMap) Get(key string) *Subscription {
+	if v, ok := s.m.Load(key); ok {
+		return v.(*Subscription)
+	}
+	return nil
+}
+
+func (s *SubscriptionMap) Delete(key string) {
+	s.m.Delete(key)
+}
+
+func (s *SubscriptionMap) StopAll() {
+	s.m.Range(func(key, value any) bool {
+		if sub, ok := value.(*Subscription); ok {
+			sub.Stop()
+		}
+		return true
+	})
 }
