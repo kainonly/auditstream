@@ -46,7 +46,7 @@ type Option struct {
 	Key         string   `json:"key"`
 	Subs        []string `json:"subs"`
 	Description string   `json:"description"`
-	Collection  string   `json:"collection"`
+	Stream      string   `json:"stream"`
 	*State
 }
 
