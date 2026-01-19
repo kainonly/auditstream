@@ -1,110 +1,143 @@
 package app
 
 import (
+	"bytes"
 	"context"
-	"errors"
+	"fmt"
+	"net/http"
+	"sync"
 	"time"
 
-	"github.com/bytedance/sonic"
 	"github.com/kainonly/auditstream/v3/common"
-	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"go.uber.org/zap"
 )
 
 type App struct {
 	V  *common.Values
-	Nc *nats.Conn
 	Js jetstream.JetStream
-	Kv jetstream.KeyValue
 
-	Subs *SubscriptionMap
+	cc     jetstream.ConsumeContext
+	mu     sync.Mutex
+	buffer []jetstream.Msg
+	stopCh chan struct{}
 }
 
-func New(v *common.Values, nc *nats.Conn, js jetstream.JetStream, kv jetstream.KeyValue) *App {
+func New(v *common.Values, js jetstream.JetStream) *App {
 	return &App{
-		V:    v,
-		Nc:   nc,
-		Js:   js,
-		Kv:   kv,
-		Subs: NewSubscriptionMap(),
+		V:      v,
+		Js:     js,
+		buffer: make([]jetstream.Msg, 0, v.BatchSize),
+		stopCh: make(chan struct{}),
 	}
 }
 
 func (x *App) Run(ctx context.Context) (err error) {
-	var keys []string
-	if keys, err = x.Kv.Keys(ctx); err != nil {
-		if errors.Is(err, jetstream.ErrNoKeysFound) {
-			keys = make([]string, 0)
-		} else {
-			return
-		}
-	}
+	streamName := fmt.Sprintf("%s_%s", x.V.Namespace, x.V.Stream)
 
-	for _, key := range keys {
-		var entry jetstream.KeyValueEntry
-		if entry, err = x.Kv.Get(ctx, key); err != nil {
-			return
-		}
-		var option Option
-		if err = sonic.Unmarshal(entry.Value(), &option); err != nil {
-			common.Log.Error("decoding fail",
-				zap.String("key", key),
-				zap.Error(err),
-			)
-			return
-		}
-		if err = x.Subscribe(option); err != nil {
-			common.Log.Error("subscribe fail",
-				zap.String("key", key),
-				zap.Error(err),
-			)
-		}
-	}
-
-	common.Log.Info("service initialized successfully.")
-
-	var watch jetstream.KeyWatcher
-	if watch, err = x.Kv.WatchAll(ctx); err != nil {
+	var consumer jetstream.Consumer
+	if consumer, err = x.Js.Consumer(ctx, streamName, "default"); err != nil {
 		return
 	}
 
-	common.Log.Info("automatically observing configuration changes.")
-	cur := time.Now()
-	for entry := range watch.Updates() {
-		if entry == nil || entry.Created().Unix() < cur.Unix() {
-			continue
-		}
-		key := entry.Key()
-		switch entry.Operation() {
-		case jetstream.KeyValuePut:
-			var option Option
-			if err = sonic.Unmarshal(entry.Value(), &option); err != nil {
-				common.Log.Error("decoding fail",
-					zap.ByteString("data", entry.Value()),
-					zap.Error(err),
-				)
-				return
-			}
-			if err = x.Subscribe(option); err != nil {
-				common.Log.Error("subscribe fail",
-					zap.String("key", key),
-					zap.Error(err),
-				)
-			}
-		case jetstream.KeyValueDelete, jetstream.KeyValuePurge:
-			if err = x.Unsubscribe(key); err != nil {
-				common.Log.Error("unsubscribe fail",
-					zap.String("key", key),
-					zap.Error(err),
-				)
-			}
-		}
+	if x.cc, err = consumer.Consume(func(msg jetstream.Msg) {
+		x.push(msg)
+	}); err != nil {
+		return
 	}
 
+	common.Log.Info("consuming stream",
+		zap.String("stream", streamName),
+	)
+
+	go x.flushLoop()
+
+	<-ctx.Done()
 	return
 }
 
+func (x *App) push(msg jetstream.Msg) {
+	x.mu.Lock()
+	x.buffer = append(x.buffer, msg)
+	shouldFlush := len(x.buffer) >= x.V.BatchSize
+	x.mu.Unlock()
+
+	if shouldFlush {
+		x.flush()
+	}
+}
+
+func (x *App) flushLoop() {
+	ticker := time.NewTicker(x.V.FlushInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			x.flush()
+		case <-x.stopCh:
+			x.flush()
+			return
+		}
+	}
+}
+
+func (x *App) flush() {
+	x.mu.Lock()
+	if len(x.buffer) == 0 {
+		x.mu.Unlock()
+		return
+	}
+	msgs := x.buffer
+	x.buffer = make([]jetstream.Msg, 0, x.V.BatchSize)
+	x.mu.Unlock()
+
+	if err := x.writeBatch(msgs); err != nil {
+		common.Log.Error("flush fail",
+			zap.Int("count", len(msgs)),
+			zap.Error(err),
+		)
+		for _, msg := range msgs {
+			_ = msg.Nak()
+		}
+		return
+	}
+
+	for _, msg := range msgs {
+		_ = msg.Ack()
+	}
+
+	common.Log.Debug("flush ok",
+		zap.Int("count", len(msgs)),
+	)
+}
+
+func (x *App) writeBatch(msgs []jetstream.Msg) error {
+	var buf bytes.Buffer
+	for _, msg := range msgs {
+		buf.Write(msg.Data())
+		buf.WriteByte('\n')
+	}
+
+	url := x.V.Victoria + "/insert/jsonline?_stream_fields=stream&_msg_field=msg&_time_field=time"
+	req, err := http.NewRequest(http.MethodPost, url, &buf)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/stream+json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	return nil
+}
+
 func (x *App) Close() {
-	x.Subs.StopAll()
+	if x.cc != nil {
+		x.cc.Stop()
+	}
+	close(x.stopCh)
 }

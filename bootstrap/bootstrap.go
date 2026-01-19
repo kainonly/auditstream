@@ -1,7 +1,6 @@
 package bootstrap
 
 import (
-	"context"
 	"os"
 	"strings"
 
@@ -51,13 +50,4 @@ func UseNats(values *common.Values) (nc *nats.Conn, err error) {
 
 func UseJetStream(nc *nats.Conn) (jetstream.JetStream, error) {
 	return jetstream.New(nc)
-}
-
-func UseKeyValue(values *common.Values, js jetstream.JetStream) (jetstream.KeyValue, error) {
-	return js.CreateOrUpdateKeyValue(context.TODO(), jetstream.KeyValueConfig{
-		Bucket:      values.Namespace,
-		Description: values.Description,
-		History:     3,
-		Compression: true,
-	})
 }

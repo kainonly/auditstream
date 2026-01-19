@@ -20,28 +20,23 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
 	nc, err := bootstrap.UseNats(values)
 	if err != nil {
 		panic(err)
 	}
+	defer nc.Close()
+
 	js, err := bootstrap.UseJetStream(nc)
 	if err != nil {
 		panic(err)
 	}
-	kv, err := bootstrap.UseKeyValue(values, js)
-	if err != nil {
-		panic(err)
-	}
-
-	x := app.New(values, nc, js, kv)
-
-	if err = x.States(); err != nil {
-		panic(err)
-	}
 
 	ctx, cancel := context.WithCancel(context.Background())
+
+	x := app.New(values, js)
 	go func() {
-		if err = x.Run(ctx); err != nil {
+		if err := x.Run(ctx); err != nil {
 			common.Log.Error(err.Error())
 		}
 	}()
