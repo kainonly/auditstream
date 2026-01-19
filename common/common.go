@@ -15,6 +15,7 @@ type Values struct {
 	NatsHosts     []string      `yaml:"nats_hosts"`
 	NatsToken     string        `yaml:"nats_token"`
 	Victoria      string        `yaml:"victoria"`
+	VictoriaPath  string        `yaml:"victoria_path"`
 	BatchSize     int           `yaml:"batch_size"`
 	FlushInterval time.Duration `yaml:"flush_interval"`
 }

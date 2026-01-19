@@ -26,6 +26,7 @@ nats_hosts:
   - nats://127.0.0.1:4222
 nats_token: your-token
 victoria: http://localhost:9428
+victoria_path: /insert/jsonline?_stream_fields=stream&_msg_field=msg&_time_field=time
 batch_size: 100
 flush_interval: 5s
 ```
@@ -38,6 +39,7 @@ flush_interval: 5s
 | `nats_hosts` | NATS server addresses |
 | `nats_token` | NATS authentication token |
 | `victoria` | VictoriaLogs endpoint URL |
+| `victoria_path` | VictoriaLogs API path with query params |
 | `batch_size` | Flush buffer when reaching this count |
 | `flush_interval` | Flush buffer at this interval |
 

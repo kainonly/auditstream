@@ -31,6 +31,7 @@ nats_hosts:              # NATS server addresses
   - nats://127.0.0.1:4222
 nats_token: string       # NATS authentication token
 victoria: string         # VictoriaLogs endpoint URL
+victoria_path: string    # VictoriaLogs API path with query params
 batch_size: 100          # Flush buffer when reaching this count
 flush_interval: 5s       # Flush buffer at this interval
 ```

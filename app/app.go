@@ -147,10 +147,7 @@ func (x *App) writeBatch(msgs []jetstream.Msg) error {
 	}
 
 	// POST 到 VictoriaLogs jsonline 接口
-	// _stream_fields: 用于日志流分组的字段
-	// _msg_field: 消息内容字段
-	// _time_field: 时间戳字段
-	url := x.V.Victoria + "/insert/jsonline?_stream_fields=stream&_msg_field=msg&_time_field=time"
+	url := x.V.Victoria + x.V.VictoriaPath
 	req, err := http.NewRequest(http.MethodPost, url, &buf)
 	if err != nil {
 		return err

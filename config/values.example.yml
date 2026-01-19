@@ -5,5 +5,6 @@ nats_hosts:
   - nats://127.0.0.1:4222
 nats_token: s3cr3t
 victoria: http://localhost:9428
+victoria_path: /insert/jsonline?_stream_fields=stream&_msg_field=msg&_time_field=time
 batch_size: 100
 flush_interval: 5s
