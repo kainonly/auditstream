@@ -20,9 +20,9 @@ jobs:
 
     env:
       GO111MODULE: on
-      NATS_HOSTS: nats://127.0.0.1:4222,nats://127.0.0.1:4223,nats://127.0.0.1:4224
+      NATS_NAMESPACE: test
+      NATS_HOST: nats://127.0.0.1:4222
       NATS_TOKEN: s3cr3t
-      AUTO: 1
 
     steps:
       - name: Checkout code
@@ -31,6 +31,17 @@ jobs:
       - name: Start NATS cluster
         run: docker compose -f ".github/compose/docker-compose.yml" up -d
 
+      - name: Wait for NATS cluster
+        run: |
+          for i in {1..30}; do
+            if nc -z localhost 4222; then
+              echo "NATS is ready"
+              break
+            fi
+            echo "Waiting for NATS..."
+            sleep 1
+          done
+
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
@@ -38,7 +49,7 @@ jobs:
           cache: true
 
       - name: Run tests with coverage
-        run: go test -race -covermode atomic -coverprofile=covprofile ./client/...
+        run: go test -race -covermode atomic -coverprofile=covprofile ./transfer/...
 
       - name: Upload coverage to Coveralls
         if: success() && github.event_name == 'push'

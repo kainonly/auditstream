@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/bytedance/sonic"
+	"github.com/joho/godotenv"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
-	"gopkg.in/yaml.v3"
 )
 
 func TestNewAuditEvent(t *testing.T) {
@@ -270,29 +270,40 @@ func TestTimeField(t *testing.T) {
 
 // 配置结构
 type testConfig struct {
-	Namespace string   `yaml:"namespace"`
-	NatsHosts []string `yaml:"nats_hosts"`
-	NatsToken string   `yaml:"nats_token"`
+	Namespace string
+	NatsHost  string
+	NatsToken string
 }
 
 func loadTestConfig(t *testing.T) *testConfig {
-	data, err := os.ReadFile("../config/values.yml")
-	if err != nil {
-		t.Fatalf("failed to read config: %v", err)
+	// 尝试加载 .env 文件（本地开发）
+	_ = godotenv.Load("../.env")
+
+	cfg := &testConfig{
+		Namespace: os.Getenv("NATS_NAMESPACE"),
+		NatsHost:  os.Getenv("NATS_HOST"),
+		NatsToken: os.Getenv("NATS_TOKEN"),
 	}
-	var cfg testConfig
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		t.Fatalf("failed to parse config: %v", err)
+
+	if cfg.Namespace == "" {
+		cfg.Namespace = "test"
 	}
-	return &cfg
+	if cfg.NatsHost == "" {
+		t.Skip("NATS_HOST not set, skipping integration test")
+	}
+
+	return cfg
 }
 
 func setupNatsConnection(t *testing.T) (*nats.Conn, *testConfig) {
 	cfg := loadTestConfig(t)
-	nc, err := nats.Connect(
-		cfg.NatsHosts[0],
-		nats.Token(cfg.NatsToken),
-	)
+
+	opts := []nats.Option{}
+	if cfg.NatsToken != "" {
+		opts = append(opts, nats.Token(cfg.NatsToken))
+	}
+
+	nc, err := nats.Connect(cfg.NatsHost, opts...)
 	if err != nil {
 		t.Fatalf("failed to connect to NATS: %v", err)
 	}
