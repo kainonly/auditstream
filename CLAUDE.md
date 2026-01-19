@@ -76,6 +76,7 @@ flush_interval: 5s       # Flush buffer at this interval
 - **bootstrap/bootstrap.go** - Initialization (Zap logger, NATS, JetStream)
 - **app/app.go** - Core logic: Stream init, Consume, Buffer, Flush, Write
 - **common/common.go** - Configuration struct (Values) and global logger
+- **transfer/transfer.go** - Client SDK for publishing audit events
 
 ## Data Flow
 
@@ -131,6 +132,50 @@ flush():
 
 - **nats.io/nats.go** - NATS client with JetStream support
 - **go.uber.org/zap** - Structured logging
+- **github.com/bytedance/sonic** - High-performance JSON
+
+## Transfer SDK
+
+Client SDK for publishing audit events to NATS JetStream.
+
+### Usage
+
+```go
+import "github.com/kainonly/auditstream/v3/transfer"
+
+// Create transfer client
+t, err := transfer.New(nc, "namespace")
+
+// Publish with AuditEvent (recommended)
+event := transfer.NewAuditEvent("user-actions", "User logged in").
+    WithAction("login").
+    WithUser("user123", "192.168.1.1").
+    WithResource("/api/auth")
+t.Publish(ctx, "audits", event)
+
+// Publish custom data
+t.Publish(ctx, "audits", map[string]any{
+    "time":   time.Now(),
+    "stream": "custom",
+    "msg":    "Custom message",
+})
+
+// Async publish (fire and forget)
+t.PublishAsync("audits", event)
+```
+
+### AuditEvent Fields
+
+| Field | JSON | Description |
+|-------|------|-------------|
+| Time | `time` | Event timestamp (_time_field) |
+| Stream | `stream` | Log stream identifier (_stream_fields) |
+| Msg | `msg` | Message content (_msg_field) |
+| Action | `action` | Operation type |
+| UserID | `user_id` | User identifier |
+| ClientIP | `client_ip` | Client IP address |
+| Resource | `resource` | Resource identifier |
+| Extra | `extra` | Additional data |
 
 ## Scaling
 

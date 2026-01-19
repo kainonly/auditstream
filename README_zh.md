@@ -111,6 +111,39 @@ flush():
     write() → 成功: ACK 全部 / 失败: NAK 全部
 ```
 
+## Transfer SDK
+
+用于发送审计事件的客户端 SDK。
+
+```go
+import "github.com/kainonly/auditstream/v3/transfer"
+
+// 创建客户端
+t, err := transfer.New(nc, "namespace")
+
+// 发送审计事件
+event := transfer.NewAuditEvent("user-actions", "用户登录").
+    WithAction("login").
+    WithUser("user123", "192.168.1.1")
+t.Publish(ctx, "audits", event)
+
+// 异步发送
+t.PublishAsync("audits", event)
+```
+
+### AuditEvent 字段
+
+| 字段 | JSON | 说明 |
+|------|------|------|
+| Time | `time` | 事件时间 |
+| Stream | `stream` | 日志流标识 |
+| Msg | `msg` | 消息内容 |
+| Action | `action` | 操作类型 |
+| UserID | `user_id` | 用户 ID |
+| ClientIP | `client_ip` | 客户端 IP |
+| Resource | `resource` | 资源标识 |
+| Extra | `extra` | 额外数据 |
+
 ## 水平扩展
 
 部署多个 Pod 消费不同的 Stream：

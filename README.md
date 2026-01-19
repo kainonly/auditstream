@@ -86,6 +86,26 @@ flush_interval: 5s
                   └─────────────────────────┘
 ```
 
+## Transfer SDK
+
+Client SDK for publishing audit events.
+
+```go
+import "github.com/kainonly/auditstream/v3/transfer"
+
+// Create client
+t, err := transfer.New(nc, "namespace")
+
+// Publish audit event
+event := transfer.NewAuditEvent("user-actions", "User logged in").
+    WithAction("login").
+    WithUser("user123", "192.168.1.1")
+t.Publish(ctx, "audits", event)
+
+// Async publish
+t.PublishAsync("audits", event)
+```
+
 ## Scaling
 
 Deploy multiple pods to consume from different streams:
