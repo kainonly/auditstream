@@ -1,5 +1,13 @@
 # AuditStream
 
+[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/kainonly/auditstream/release.yml?label=release&style=flat-square)](https://github.com/kainonly/auditstream/actions/workflows/release.yml)
+[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/kainonly/auditstream/testing.yml?label=testing&style=flat-square)](https://github.com/kainonly/auditstream/actions/workflows/testing.yml)
+[![Release](https://img.shields.io/github/v/release/kainonly/auditstream.svg?style=flat-square&include_prereleases)](https://github.com/kainonly/auditstream/releases)
+[![Coveralls github](https://img.shields.io/coveralls/github/kainonly/auditstream.svg?style=flat-square)](https://coveralls.io/github/kainonly/auditstream)
+[![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/kainonly/auditstream?style=flat-square)](https://github.com/kainonly/auditstream)
+[![Go Report Card](https://goreportcard.com/badge/github.com/kainonly/auditstream?style=flat-square)](https://goreportcard.com/report/github.com/kainonly/auditstream)
+[![GitHub license](https://img.shields.io/github/license/kainonly/auditstream?style=flat-square)](https://raw.githubusercontent.com/kainonly/auditstream/v3/LICENSE)
+
 轻量级审计日志收集与持久化服务。从 NATS JetStream 队列消费审计事件，批量写入 VictoriaLogs 进行长期存储与分析。
 
 ## 概览
@@ -47,6 +55,8 @@ flush_interval: 5s
 | `victoria_path` | VictoriaLogs API 路径及查询参数 |
 | `batch_size` | 缓冲区达到此数量时触发写入 |
 | `flush_interval` | 定时写入间隔 |
+
+本地测试可选加载 `.env`，示例见 `.env.example`。
 
 ## 数据流
 

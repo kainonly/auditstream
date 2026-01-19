@@ -1,5 +1,13 @@
 # AuditStream
 
+[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/kainonly/auditstream/release.yml?label=release&style=flat-square)](https://github.com/kainonly/auditstream/actions/workflows/release.yml)
+[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/kainonly/auditstream/testing.yml?label=testing&style=flat-square)](https://github.com/kainonly/auditstream/actions/workflows/testing.yml)
+[![Release](https://img.shields.io/github/v/release/kainonly/auditstream.svg?style=flat-square&include_prereleases)](https://github.com/kainonly/auditstream/releases)
+[![Coveralls github](https://img.shields.io/coveralls/github/kainonly/auditstream.svg?style=flat-square)](https://coveralls.io/github/kainonly/auditstream)
+[![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/kainonly/auditstream?style=flat-square)](https://github.com/kainonly/auditstream)
+[![Go Report Card](https://goreportcard.com/badge/github.com/kainonly/auditstream?style=flat-square)](https://goreportcard.com/report/github.com/kainonly/auditstream)
+[![GitHub license](https://img.shields.io/github/license/kainonly/auditstream?style=flat-square)](https://raw.githubusercontent.com/kainonly/auditstream/v3/LICENSE)
+
 A lightweight service for collecting and persisting audit logs. It consumes audit events from a NATS JetStream queue and batch writes them to VictoriaLogs.
 
 ## Overview
