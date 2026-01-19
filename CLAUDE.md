@@ -43,6 +43,7 @@ flush_interval: 5s       # Flush buffer at this interval
 │                     NATS JetStream                          │
 │  ┌─────────────────┐                                        │
 │  │ Stream: {namespace}_{stream}                             │
+│  │ Subject: {namespace}.{stream}                            │
 │  │ Consumer: default (work queue mode)                      │
 │  └────────┬────────┘                                        │
 └───────────┼─────────────────────────────────────────────────┘
@@ -53,7 +54,7 @@ flush_interval: 5s       # Flush buffer at this interval
 │                     AuditStream Pod                         │
 │                                                             │
 │   ┌─────────┐    ┌──────────────────┐    ┌───────────────┐  │
-│   │  push() │───►│ buffer []Msg     │───►│ writeBatch()  │  │
+│   │  push() │───►│ buffer []Msg     │───►│ write()       │  │
 │   │         │    │ (mutex protected)│    │ POST jsonline │  │
 │   └─────────┘    └──────────────────┘    └───────────────┘  │
 │                          │                                  │
@@ -65,7 +66,7 @@ flush_interval: 5s       # Flush buffer at this interval
                            ▼
                   ┌─────────────────────────┐
                   │      VictoriaLogs       │
-                  │  /insert/jsonline       │
+                  │  {victoria}{victoria_path}
                   └─────────────────────────┘
 ```
 
@@ -73,16 +74,38 @@ flush_interval: 5s       # Flush buffer at this interval
 
 - **main.go** - Entry point, signal handling, graceful shutdown
 - **bootstrap/bootstrap.go** - Initialization (Zap logger, NATS, JetStream)
-- **app/app.go** - Core logic: Consume, Buffer, Flush, WriteBatch
+- **app/app.go** - Core logic: Stream init, Consume, Buffer, Flush, Write
 - **common/common.go** - Configuration struct (Values) and global logger
 
 ## Data Flow
 
 1. **Initialization**: main.go → bootstrap → app.New() → app.Run()
-2. **Consume**: JetStream pushes messages via Consume() callback
-3. **Buffer**: push() adds message to buffer, triggers flush if batch_size reached
-4. **Flush Loop**: Ticker triggers flush() every flush_interval
-5. **Write**: writeBatch() POSTs JSONL to VictoriaLogs, then ACK/NAK messages
+2. **Stream Setup**: CreateOrUpdateStream + CreateOrUpdateConsumer (auto-create on startup)
+3. **Consume**: JetStream pushes messages via Consume() callback
+4. **Buffer**: push() adds message to buffer, triggers flush if batch_size reached
+5. **Flush Loop**: Ticker triggers flush() every flush_interval
+6. **Write**: write() POSTs JSONL to VictoriaLogs, then ACK/NAK messages
+
+## Stream Initialization
+
+On startup, AuditStream auto-creates stream and consumer if not exist:
+
+```go
+// Stream config
+StreamConfig{
+    Name:        "{namespace}_{stream}",
+    Subjects:    ["{namespace}.{stream}"],
+    Retention:   WorkQueuePolicy,  // 消息被消费后删除
+    Storage:     FileStorage,
+    Compression: S2Compression,
+}
+
+// Consumer config
+ConsumerConfig{
+    Name:      "default",
+    AckPolicy: AckExplicitPolicy,  // 显式 ACK
+}
+```
 
 ## Flush Logic
 
@@ -101,7 +124,7 @@ flushLoop():
 flush():
     lock → swap buffer → unlock
     if empty: return
-    writeBatch() → success: ACK all / failure: NAK all
+    write() → success: ACK all / failure: NAK all
 ```
 
 ## Key Libraries

@@ -1,27 +1,27 @@
 # AuditStream
 
-A lightweight service for collecting and persisting audit logs. It consumes audit events from a NATS JetStream queue and batch writes them to VictoriaLogs.
+轻量级审计日志收集与持久化服务。从 NATS JetStream 队列消费审计事件，批量写入 VictoriaLogs 进行长期存储与分析。
 
-## Overview
+## 概览
 
-![Architecture](docs/plan.png)
+![架构图](docs/plan.png)
 
-## Features
+## 特性
 
-- Push-based message consumption from NATS JetStream
-- Batch writes to VictoriaLogs with configurable buffer
-- Auto-create stream and consumer on startup
-- Graceful shutdown with final buffer flush
-- Cloud-native design: one stream per pod, scale horizontally
+- 基于 Push 模式从 NATS JetStream 消费消息
+- 可配置的缓冲区批量写入 VictoriaLogs
+- 启动时自动创建 Stream 和 Consumer
+- 优雅关闭，确保最后一批数据写入
+- 云原生设计：一个 Pod 消费一个 Stream，水平扩展
 
-## Prerequisites
+## 前置条件
 
-- NATS JetStream cluster
-- VictoriaLogs instance
+- NATS JetStream 集群
+- VictoriaLogs 实例
 
-## Configuration
+## 配置
 
-Create `config/values.yml`:
+创建 `config/values.yml`：
 
 ```yaml
 mode: debug
@@ -36,31 +36,31 @@ batch_size: 100
 flush_interval: 5s
 ```
 
-| Field | Description |
-|-------|-------------|
-| `mode` | `debug` or `release` |
-| `namespace` | Application namespace for stream naming |
-| `stream` | Stream name to consume (full name: `{namespace}_{stream}`) |
-| `nats_hosts` | NATS server addresses |
-| `nats_token` | NATS authentication token |
-| `victoria` | VictoriaLogs endpoint URL |
-| `victoria_path` | VictoriaLogs API path with query params |
-| `batch_size` | Flush buffer when reaching this count |
-| `flush_interval` | Flush buffer at this interval |
+| 字段 | 说明 |
+|------|------|
+| `mode` | 日志模式：`debug` 或 `release` |
+| `namespace` | 应用命名空间，用于 Stream 命名 |
+| `stream` | Stream 名称（完整名称：`{namespace}_{stream}`） |
+| `nats_hosts` | NATS 服务器地址列表 |
+| `nats_token` | NATS 认证令牌 |
+| `victoria` | VictoriaLogs 端点 URL |
+| `victoria_path` | VictoriaLogs API 路径及查询参数 |
+| `batch_size` | 缓冲区达到此数量时触发写入 |
+| `flush_interval` | 定时写入间隔 |
 
-## Data Flow
+## 数据流
 
 ```
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│ App Service │     │ App Service │     │ App Service │
+│  应用服务 A  │     │  应用服务 B  │     │  应用服务 C  │
 └──────┬──────┘     └──────┬──────┘     └──────┬──────┘
        │                   │                   │
        └───────────────────┼───────────────────┘
-                           │ Write Event
+                           │ 写入事件
                            ▼
                   ┌─────────────────┐
                   │  Transfer SDK   │
-                  │  Push JSON      │
+                  │  推送 JSON      │
                   └────────┬────────┘
                            │
                            ▼
@@ -68,39 +68,64 @@ flush_interval: 5s
 │                     NATS JetStream                          │
 │  Stream: {namespace}_{stream}                               │
 │  Subject: {namespace}.{stream}                              │
-│  Consumer: default (WorkQueue)                              │
+│  Consumer: default (工作队列模式)                            │
 └───────────────────────────┬─────────────────────────────────┘
                             │ Consume()
                             ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                   AuditStream Pod                           │
 │                                                             │
-│   Message ──► Buffer ──► Flush ──► POST /insert/jsonline    │
-│                 │                                           │
-│         (batch_size OR flush_interval)                      │
+│   消息 ──► 缓冲区 ──► 写入 ──► POST /insert/jsonline         │
+│              │                                              │
+│      (达到 batch_size 或 flush_interval)                    │
 └───────────────────────────┬─────────────────────────────────┘
-                            │ Success: ACK / Fail: NAK
+                            │ 成功: ACK / 失败: NAK
                             ▼
                   ┌─────────────────────────┐
                   │      VictoriaLogs       │
                   └─────────────────────────┘
 ```
 
-## Scaling
+## 写入逻辑
 
-Deploy multiple pods to consume from different streams:
+两个条件任一满足即触发写入：
+
+1. **数量触发**：缓冲区达到 `batch_size`（如 100 条）
+2. **定时触发**：每隔 `flush_interval`（如 5 秒）
+
+```
+push(msg):
+    加锁 → 追加到缓冲区 → 解锁
+    if len(buffer) >= batch_size:
+        flush()
+
+flushLoop():
+    每隔 flush_interval:
+        flush()
+    收到停止信号:
+        flush()  // 关闭前最后写入一次
+
+flush():
+    加锁 → 交换缓冲区 → 解锁
+    if 空: return
+    write() → 成功: ACK 全部 / 失败: NAK 全部
+```
+
+## 水平扩展
+
+部署多个 Pod 消费不同的 Stream：
 
 ```yaml
-# Pod A: consumes alpha_logs
+# Pod A: 消费 alpha_logs
 stream: logs
 
-# Pod B: consumes alpha_auth
+# Pod B: 消费 alpha_auth
 stream: auth
 
-# Pod C: consumes alpha_payments
+# Pod C: 消费 alpha_payments
 stream: payments
 ```
 
-## License
+## 许可证
 
 [BSD-3-Clause License](LICENSE)

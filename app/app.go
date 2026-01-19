@@ -37,17 +37,38 @@ func New(v *common.Values, js jetstream.JetStream) *App {
 }
 
 // Run 启动消费循环
-// 1. 获取 JetStream consumer
+// 1. 创建或更新 stream 和 consumer
 // 2. 启动 push-based 消费
 // 3. 启动定时 flush 协程
 // 4. 阻塞直到 ctx 取消
 func (x *App) Run(ctx context.Context) (err error) {
 	streamName := fmt.Sprintf("%s_%s", x.V.Namespace, x.V.Stream)
+	subject := fmt.Sprintf("%s.%s", x.V.Namespace, x.V.Stream)
 
-	var consumer jetstream.Consumer
-	if consumer, err = x.Js.Consumer(ctx, streamName, "default"); err != nil {
+	// 创建或更新 stream
+	if _, err = x.Js.CreateOrUpdateStream(ctx, jetstream.StreamConfig{
+		Name:        streamName,
+		Subjects:    []string{subject},
+		Retention:   jetstream.WorkQueuePolicy, // 工作队列模式：消息被消费后删除
+		Storage:     jetstream.FileStorage,
+		Compression: jetstream.S2Compression,
+	}); err != nil {
 		return
 	}
+
+	// 创建或更新 consumer
+	var consumer jetstream.Consumer
+	if consumer, err = x.Js.CreateOrUpdateConsumer(ctx, streamName, jetstream.ConsumerConfig{
+		Name:      "default",
+		AckPolicy: jetstream.AckExplicitPolicy, // 显式 ACK
+	}); err != nil {
+		return
+	}
+
+	common.Log.Info("stream initialized",
+		zap.String("stream", streamName),
+		zap.String("subject", subject),
+	)
 
 	// Consume 是 push-based 模式，消息到达时自动调用回调
 	if x.cc, err = consumer.Consume(func(msg jetstream.Msg) {
@@ -56,9 +77,7 @@ func (x *App) Run(ctx context.Context) (err error) {
 		return
 	}
 
-	common.Log.Info("consuming stream",
-		zap.String("stream", streamName),
-	)
+	common.Log.Info("consuming started")
 
 	go x.flushLoop()
 
@@ -114,7 +133,7 @@ func (x *App) flush() {
 	x.mu.Unlock()
 
 	// 写入 VictoriaLogs
-	if err := x.writeBatch(msgs); err != nil {
+	if err := x.write(msgs); err != nil {
 		common.Log.Error("flush fail",
 			zap.Int("count", len(msgs)),
 			zap.Error(err),
@@ -138,7 +157,7 @@ func (x *App) flush() {
 
 // writeBatch 批量写入 VictoriaLogs
 // 使用 JSONL 格式（每行一个 JSON）
-func (x *App) writeBatch(msgs []jetstream.Msg) error {
+func (x *App) write(msgs []jetstream.Msg) (err error) {
 	// 构建 JSONL 格式: 每条消息一行
 	var buf bytes.Buffer
 	for _, msg := range msgs {
@@ -148,19 +167,19 @@ func (x *App) writeBatch(msgs []jetstream.Msg) error {
 
 	// POST 到 VictoriaLogs jsonline 接口
 	url := x.V.Victoria + x.V.VictoriaPath
-	req, err := http.NewRequest(http.MethodPost, url, &buf)
-	if err != nil {
-		return err
+	var req *http.Request
+	if req, err = http.NewRequest(http.MethodPost, url, &buf); err != nil {
+		return
 	}
 	req.Header.Set("Content-Type", "application/stream+json")
 
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
+	var resp *http.Response
+	if resp, err = http.DefaultClient.Do(req); err != nil {
 		return err
 	}
 	defer resp.Body.Close()
 
-	return nil
+	return
 }
 
 // Close 优雅关闭
