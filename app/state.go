@@ -13,6 +13,13 @@ type State struct {
 	Active bool `json:"active"`
 }
 
+func (x *App) LoadState(key string) (b []byte, err error) {
+	state := &State{
+		Active: x.Consumers.Get(key) != nil,
+	}
+	return sonic.Marshal(state)
+}
+
 func (x *App) States() (err error) {
 	if _, err = x.Nc.Subscribe(fmt.Sprintf("%s.states", x.V.Namespace), func(m *nats.Msg) {
 		key := string(m.Data)
@@ -35,11 +42,4 @@ func (x *App) States() (err error) {
 		return
 	}
 	return
-}
-
-func (x *App) LoadState(key string) (b []byte, err error) {
-	state := &State{
-		Active: x.Consumers.Get(key) != nil,
-	}
-	return sonic.Marshal(state)
 }

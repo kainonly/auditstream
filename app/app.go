@@ -31,10 +31,6 @@ func New(v *common.Values, nc *nats.Conn, js jetstream.JetStream, kv jetstream.K
 	}
 }
 
-func (x *App) Close() {
-	x.Consumers.StopAll()
-}
-
 func (x *App) Run(ctx context.Context) (err error) {
 	var keys []string
 	if keys, err = x.Kv.Keys(ctx); err != nil {
@@ -107,4 +103,8 @@ func (x *App) Run(ctx context.Context) (err error) {
 	}
 
 	return
+}
+
+func (x *App) Close() {
+	x.Consumers.StopAll()
 }

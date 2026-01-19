@@ -10,19 +10,19 @@ import (
 	"go.uber.org/zap"
 )
 
-type Option struct {
-	Key         string   `json:"key"`
-	Subs        []string `json:"subs"`
-	Collection  string   `json:"collection"`
-	Description string   `json:"description"`
-}
-
 func (x *App) StreamName(key string) string {
 	return fmt.Sprintf("%s_%s", x.V.Namespace, key)
 }
 
 func (x *App) SubName(key string) string {
 	return fmt.Sprintf("%s.%s", x.V.Namespace, key)
+}
+
+type Option struct {
+	Key         string   `json:"key"`
+	Subs        []string `json:"subs"`
+	Stream      string   `json:"stream"`
+	Description string   `json:"description"`
 }
 
 func (x *App) Subscribe(option Option) (err error) {
@@ -56,6 +56,8 @@ func (x *App) Subscribe(option Option) (err error) {
 }
 
 func (x *App) handleMessage(option Option, msg jetstream.Msg) {
+	fmt.Println(option)
+
 	if err := msg.Ack(); err != nil {
 		common.Log.Error("ack fail",
 			zap.String("key", option.Key),
