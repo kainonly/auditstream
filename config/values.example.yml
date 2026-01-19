@@ -1,6 +1,6 @@
 mode: debug
-namespace: alpha
-stream: logs
+namespace: litho
+stream: audits
 nats_hosts:
   - nats://127.0.0.1:4222
 nats_token: s3cr3t

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-AuditStream is a lightweight Go service for collecting and persisting audit logs. It consumes audit events from NATS JetStream queues and batch writes them to VictoriaLogs for long-term storage and analysis.
+AuditStream is a lightweight Go service for collecting and persisting audit logs. It consumes audit events from a NATS JetStream queue and batch writes them to VictoriaLogs for long-term storage and analysis.
 
 ## Build and Development Commands
 
@@ -17,9 +17,6 @@ go build -o auditstream
 
 # Tidy dependencies
 go mod tidy
-
-# Download dependencies
-go mod download
 ```
 
 ## Configuration
@@ -27,67 +24,98 @@ go mod download
 Configuration is loaded from `config/values.yml`. Copy `config/values.example.yml` to create it:
 
 ```yaml
-mode: debug|release        # Logging mode
-namespace: string          # Application namespace (used for stream/KV naming)
-duration: 5s               # Polling interval
-batch: 1000                # Maximum messages per batch
-nats_hosts:                # NATS server addresses
+mode: debug|release      # Logging mode
+namespace: string        # Application namespace (used for stream naming)
+stream: string           # Stream name to consume (full: {namespace}_{stream})
+nats_hosts:              # NATS server addresses
   - nats://127.0.0.1:4222
-nats_token: string         # NATS authentication token
-victorialogs: string       # VictoriaLogs endpoint URL
+nats_token: string       # NATS authentication token
+victoria: string         # VictoriaLogs endpoint URL
+batch_size: 100          # Flush buffer when reaching this count
+flush_interval: 5s       # Flush buffer at this interval
 ```
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────┐
-│           NATS JetStream Cluster            │
-│  ┌─────────────────────────────────────┐    │
-│  │ KV Store (namespace)                │    │
-│  │ - Subscription configurations       │    │
-│  │ - Watched for hot-reload            │    │
-│  └─────────────────────────────────────┘    │
-│  ┌─────────────────────────────────────┐    │
-│  │ Streams (namespace_key)             │    │
-│  │ - Work-queue streams                │    │
-│  │ - "default" consumer each           │    │
-│  └─────────────────────────────────────┘    │
-└─────────────────────────────────────────────┘
-                    ↓
-┌─────────────────────────────────────────────┐
-│         AuditStream Application             │
-│  main.go → bootstrap → app.Run()            │
-│  - Scheduler polls consumers periodically   │
-│  - KV watcher enables hot-reload            │
-│  - State queries via namespace.states       │
-└─────────────────────────────────────────────┘
-                    ↓
-┌─────────────────────────────────────────────┐
-│            VictoriaLogs                     │
-│  - Audit log batch storage                  │
-└─────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                     NATS JetStream                          │
+│  ┌─────────────────┐                                        │
+│  │ Stream: {namespace}_{stream}                             │
+│  │ Consumer: default (work queue mode)                      │
+│  └────────┬────────┘                                        │
+└───────────┼─────────────────────────────────────────────────┘
+            │
+            │ Consume() - push-based
+            ▼
+┌─────────────────────────────────────────────────────────────┐
+│                     AuditStream Pod                         │
+│                                                             │
+│   ┌─────────┐    ┌──────────────────┐    ┌───────────────┐  │
+│   │  push() │───►│ buffer []Msg     │───►│ writeBatch()  │  │
+│   │         │    │ (mutex protected)│    │ POST jsonline │  │
+│   └─────────┘    └──────────────────┘    └───────────────┘  │
+│                          │                                  │
+│              Flush triggers:                                │
+│              - len(buffer) >= batch_size                    │
+│              - ticker every flush_interval                  │
+└─────────────────────────────────────────────────────────────┘
+                           │
+                           ▼
+                  ┌─────────────────────────┐
+                  │      VictoriaLogs       │
+                  │  /insert/jsonline       │
+                  └─────────────────────────┘
 ```
 
 ## Key Source Files
 
-- **main.go** - Entry point, NATS connection setup, graceful shutdown
-- **bootstrap/bootstrap.go** - Initialization functions (Zap logger, NATS, JetStream, KV, Scheduler)
-- **app/app.go** - App struct and initialization
-- **app/subscribe.go** - Subscription management, Task() for batch fetching
-- **app/state.go** - State tracking via request-reply pattern
-- **common/common.go** - Shared structs (Values config) and globals (Logger)
-- **transfer/transfer.go** - Transfer struct for managing subscriptions and streams
+- **main.go** - Entry point, signal handling, graceful shutdown
+- **bootstrap/bootstrap.go** - Initialization (Zap logger, NATS, JetStream)
+- **app/app.go** - Core logic: Consume, Buffer, Flush, WriteBatch
+- **common/common.go** - Configuration struct (Values) and global logger
 
 ## Data Flow
 
-1. **Initialization**: main.go → bootstrap functions → app.New() → app.Run()
-2. **Dynamic Config**: KV.WatchAll() monitors for Put/Delete/Purge events
-3. **Message Processing**: Scheduler triggers Task() → FetchNoWait() from consumer → Acknowledge
-4. **State Queries**: Request-reply on `namespace.states` subject
+1. **Initialization**: main.go → bootstrap → app.New() → app.Run()
+2. **Consume**: JetStream pushes messages via Consume() callback
+3. **Buffer**: push() adds message to buffer, triggers flush if batch_size reached
+4. **Flush Loop**: Ticker triggers flush() every flush_interval
+5. **Write**: writeBatch() POSTs JSONL to VictoriaLogs, then ACK/NAK messages
+
+## Flush Logic
+
+```
+push(msg):
+    lock → append to buffer → unlock
+    if len(buffer) >= batch_size:
+        flush()
+
+flushLoop():
+    every flush_interval:
+        flush()
+    on stop signal:
+        flush() // final flush before shutdown
+
+flush():
+    lock → swap buffer → unlock
+    if empty: return
+    writeBatch() → success: ACK all / failure: NAK all
+```
 
 ## Key Libraries
 
-- **nats.io/nats.go** - NATS client with JetStream and KV support
+- **nats.io/nats.go** - NATS client with JetStream support
 - **go.uber.org/zap** - Structured logging
-- **github.com/bytedance/sonic** - High-performance JSON via goJson alias
-- **github.com/go-co-op/gocron/v2** - Job scheduling for periodic polling
+
+## Scaling
+
+One pod consumes one stream. Deploy multiple pods for multiple streams:
+
+```yaml
+# Pod A
+stream: audits
+
+# Pod B
+stream: events
+```
