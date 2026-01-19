@@ -22,6 +22,7 @@ jobs:
       GO111MODULE: on
       NATS_HOSTS: nats://127.0.0.1:4222,nats://127.0.0.1:4223,nats://127.0.0.1:4224
       NATS_TOKEN: s3cr3t
+      NAMESPACE: auditstream
       AUTO: 1
 
     steps:

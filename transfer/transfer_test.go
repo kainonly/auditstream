@@ -3,6 +3,7 @@ package transfer
 import (
 	"context"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -276,6 +277,16 @@ type testConfig struct {
 }
 
 func loadTestConfig(t *testing.T) *testConfig {
+	// 优先使用环境变量（CI 环境）
+	if natsHosts := os.Getenv("NATS_HOSTS"); natsHosts != "" {
+		return &testConfig{
+			Namespace: getEnvOrDefault("NAMESPACE", "auditstream"),
+			NatsHosts: strings.Split(natsHosts, ","),
+			NatsToken: os.Getenv("NATS_TOKEN"),
+		}
+	}
+	
+	// 本地开发使用配置文件
 	data, err := os.ReadFile("../config/values.yml")
 	if err != nil {
 		t.Fatalf("failed to read config: %v", err)
@@ -285,6 +296,13 @@ func loadTestConfig(t *testing.T) *testConfig {
 		t.Fatalf("failed to parse config: %v", err)
 	}
 	return &cfg
+}
+
+func getEnvOrDefault(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
 }
 
 func setupNatsConnection(t *testing.T) (*nats.Conn, *testConfig) {
