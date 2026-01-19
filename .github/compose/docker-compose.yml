@@ -1,0 +1,39 @@
+services:
+  nats-1:
+    image: nats:latest
+    command: >
+      -js
+      -cluster_name nats-cluster
+      -cluster nats://0.0.0.0:6222
+      -routes nats-route://nats-2:6222,nats-route://nats-3:6222
+      -p 4222
+    ports:
+      - "4222:4222"
+    networks:
+      - nats-cluster
+
+  nats-2:
+    image: nats:latest
+    command: >
+      -js
+      -cluster_name nats-cluster
+      -cluster nats://0.0.0.0:6222
+      -routes nats-route://nats-1:6222,nats-route://nats-3:6222
+      -p 4222
+    networks:
+      - nats-cluster
+
+  nats-3:
+    image: nats:latest
+    command: >
+      -js
+      -cluster_name nats-cluster
+      -cluster nats://0.0.0.0:6222
+      -routes nats-route://nats-1:6222,nats-route://nats-2:6222
+      -p 4222
+    networks:
+      - nats-cluster
+
+networks:
+  nats-cluster:
+    driver: bridge
