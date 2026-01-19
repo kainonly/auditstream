@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/go-co-op/gocron/v2"
 	"github.com/kainonly/auditstream/v3/common"
 	"github.com/nats-io/nats.go/jetstream"
 	"go.uber.org/zap"
@@ -27,6 +26,12 @@ func (x *App) SubName(key string) string {
 }
 
 func (x *App) Subscribe(option Option) (err error) {
+	// 如果已存在，先停止旧的消费者
+	if cc := x.Consumers.Get(option.Key); cc != nil {
+		cc.Stop()
+		x.Consumers.Delete(option.Key)
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
@@ -35,23 +40,14 @@ func (x *App) Subscribe(option Option) (err error) {
 		return
 	}
 
-	var job gocron.Job
-	if job, err = x.Schedule.NewJob(
-		gocron.DurationJob(x.V.Duration),
-		gocron.NewTask(func(o Option, c jetstream.Consumer) {
-			if errX := x.Task(o, c); errX != nil {
-				common.Log.Error("task fail",
-					zap.String("key", o.Key),
-					zap.Error(errX),
-				)
-			}
-		}, option, consumer),
-		gocron.WithTags(option.Key),
-	); err != nil {
+	var cc jetstream.ConsumeContext
+	if cc, err = consumer.Consume(func(msg jetstream.Msg) {
+		x.handleMessage(option, msg)
+	}); err != nil {
 		return
 	}
 
-	x.jobs.Link(option.Key, job)
+	x.Consumers.Set(option.Key, cc)
 	common.Log.Info("subscribe ok",
 		zap.String("key", option.Key),
 		zap.String("subject", x.SubName(option.Key)),
@@ -59,50 +55,34 @@ func (x *App) Subscribe(option Option) (err error) {
 	return
 }
 
-func (x *App) Task(option Option, consumer jetstream.Consumer) (err error) {
-	_, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer cancel()
-
-	var msgBatch jetstream.MessageBatch
-	if msgBatch, err = consumer.FetchNoWait(x.V.Batch); err != nil {
-		return
-	}
-
-	documents := make([]any, 0)
-	msgs := make([]jetstream.Msg, 0)
-	for msg := range msgBatch.Messages() {
-		documents = append(documents, msg.Data())
-		msgs = append(msgs, msg)
-	}
-
-	if len(documents) == 0 {
-		common.Log.Debug("task ok",
+func (x *App) handleMessage(option Option, msg jetstream.Msg) {
+	if err := msg.Ack(); err != nil {
+		common.Log.Error("ack fail",
 			zap.String("key", option.Key),
-			zap.Int("documents", len(documents)),
+			zap.Error(err),
 		)
 		return
 	}
 
-	for _, msg := range msgs {
-		msg.Ack()
-	}
-
-	common.Log.Info("task ok",
+	common.Log.Debug("message processed",
 		zap.String("key", option.Key),
-		zap.Int("documents", len(documents)),
+		zap.ByteString("data", msg.Data()),
 	)
-	return
 }
 
 func (x *App) Unsubscribe(key string) (err error) {
+	if cc := x.Consumers.Get(key); cc != nil {
+		cc.Stop()
+		x.Consumers.Delete(key)
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	if err = x.Js.DeleteStream(ctx, x.StreamName(key)); err != nil {
 		return
 	}
-	x.jobs.Unlink(key)
-	x.Schedule.RemoveByTags(key)
+
 	common.Log.Info("unsubscribe ok",
 		zap.String("key", key),
 	)

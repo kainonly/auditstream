@@ -3,11 +3,9 @@ package app
 import (
 	"context"
 	"errors"
-	"sync"
 	"time"
 
 	"github.com/bytedance/sonic"
-	"github.com/go-co-op/gocron/v2"
 	"github.com/kainonly/auditstream/v3/common"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
@@ -15,43 +13,26 @@ import (
 )
 
 type App struct {
-	V        *common.Values
-	Nc       *nats.Conn
-	Js       jetstream.JetStream
-	Kv       jetstream.KeyValue
-	Schedule gocron.Scheduler
+	V  *common.Values
+	Nc *nats.Conn
+	Js jetstream.JetStream
+	Kv jetstream.KeyValue
 
-	jobs *jobs
+	Consumers *common.ConsumerSyncMap
 }
 
-type jobs struct {
-	m sync.Map
-}
-
-func (j *jobs) Link(key string, job gocron.Job) {
-	j.m.Store(key, job)
-}
-
-func (j *jobs) Get(key string) gocron.Job {
-	if v, ok := j.m.Load(key); ok {
-		return v.(gocron.Job)
-	}
-	return nil
-}
-
-func (j *jobs) Unlink(key string) {
-	j.m.Delete(key)
-}
-
-func New(v *common.Values, nc *nats.Conn, js jetstream.JetStream, kv jetstream.KeyValue, schedule gocron.Scheduler) *App {
+func New(v *common.Values, nc *nats.Conn, js jetstream.JetStream, kv jetstream.KeyValue) *App {
 	return &App{
-		V:        v,
-		Nc:       nc,
-		Js:       js,
-		Kv:       kv,
-		Schedule: schedule,
-		jobs:     &jobs{},
+		V:         v,
+		Nc:        nc,
+		Js:        js,
+		Kv:        kv,
+		Consumers: common.NewConsumerSyncMap(),
 	}
+}
+
+func (x *App) Close() {
+	x.Consumers.StopAll()
 }
 
 func (x *App) Run(ctx context.Context) (err error) {
@@ -85,7 +66,6 @@ func (x *App) Run(ctx context.Context) (err error) {
 		}
 	}
 
-	x.Schedule.Start()
 	common.Log.Info("service initialized successfully.")
 
 	var watch jetstream.KeyWatcher

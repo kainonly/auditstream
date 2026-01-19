@@ -2,7 +2,6 @@ package app
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/bytedance/sonic"
 	"github.com/kainonly/auditstream/v3/common"
@@ -11,8 +10,7 @@ import (
 )
 
 type State struct {
-	Nexts []time.Time `json:"nexts"`
-	Last  time.Time   `json:"last"`
+	Active bool `json:"active"`
 }
 
 func (x *App) States() (err error) {
@@ -40,15 +38,8 @@ func (x *App) States() (err error) {
 }
 
 func (x *App) LoadState(key string) (b []byte, err error) {
-	job, state := x.jobs.Get(key), new(State)
-	if job == nil {
-		return sonic.Marshal(state)
-	}
-	if state.Nexts, err = job.NextRuns(5); err != nil {
-		return
-	}
-	if state.Last, err = job.LastRun(); err != nil {
-		return
+	state := &State{
+		Active: x.Consumers.Get(key) != nil,
 	}
 	return sonic.Marshal(state)
 }

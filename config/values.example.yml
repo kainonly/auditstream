@@ -1,10 +1,8 @@
 mode: debug
 namespace: alpha
-duration: 5s
-batch: 1000
 nats_hosts:
   - nats://127.0.0.1:1222
   - nats://127.0.0.1:1223
   - nats://127.0.0.1:1224
 nats_token: s3cr3t
-victorialogs: http://localhost:9428
+victoria: http://localhost:9428

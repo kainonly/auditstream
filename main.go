@@ -32,23 +32,24 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	schedule, err := bootstrap.UseSchedule()
-	if err != nil {
-		panic(err)
-	}
 
-	x := app.New(values, nc, js, kv, schedule)
+	x := app.New(values, nc, js, kv)
 
 	if err = x.States(); err != nil {
 		panic(err)
 	}
 
-	ctx := context.Background()
-	if err = x.Run(ctx); err != nil {
-		panic(err)
-	}
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		if err = x.Run(ctx); err != nil {
+			common.Log.Error(err.Error())
+		}
+	}()
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 	<-c
+
+	cancel()
+	x.Close()
 }
