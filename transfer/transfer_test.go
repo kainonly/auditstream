@@ -277,7 +277,7 @@ type testConfig struct {
 }
 
 func loadTestConfig(t *testing.T) *testConfig {
-	// 优先使用环境变量（CI 环境）
+	// Prioritize environment variables (for CI environment)
 	if natsHosts := os.Getenv("NATS_HOSTS"); natsHosts != "" {
 		return &testConfig{
 			Namespace: getEnvOrDefault("NAMESPACE", "auditstream"),
@@ -286,7 +286,7 @@ func loadTestConfig(t *testing.T) *testConfig {
 		}
 	}
 	
-	// 本地开发使用配置文件
+	// Fall back to config file (for local development)
 	data, err := os.ReadFile("../config/values.yml")
 	if err != nil {
 		t.Fatalf("failed to read config: %v", err)
