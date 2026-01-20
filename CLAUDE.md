@@ -15,8 +15,18 @@ go build -o auditstream
 # Run the application (requires config/values.yml)
 ./auditstream
 
+# Run tests
+go test ./...
+
+# Run tests with verbose output
+go test -v ./...
+
 # Tidy dependencies
 go mod tidy
+
+# Build Docker image (build binary first with CGO_ENABLED=0)
+CGO_ENABLED=0 GOOS=linux go build -o auditstream
+docker build -t auditstream .
 ```
 
 ## Configuration
@@ -133,6 +143,7 @@ flush():
 - **nats.io/nats.go** - NATS client with JetStream support
 - **go.uber.org/zap** - Structured logging
 - **github.com/bytedance/sonic** - High-performance JSON
+- **gopkg.in/yaml.v3** - YAML configuration parsing
 
 ## Transfer SDK
 
@@ -147,10 +158,11 @@ import "github.com/kainonly/auditstream/v3/transfer"
 t, err := transfer.New(nc, "namespace")
 
 // Publish with AuditEvent (recommended)
-event := transfer.NewAuditEvent("user-actions", "User logged in").
-    WithAction("login").
-    WithUser("user123", "192.168.1.1").
-    WithResource("/api/auth")
+event := transfer.NewAuditEvent("audits", "用户登录").
+    WithMeta("admin", "user", "login", 123, 456).        // platform, resource, action, objectId, userId
+    WithRequest("/api/login", map[string]any{"username": "test"}).  // path, body
+    WithResponse(200, map[string]any{"success": true}).  // code, response
+    WithClient("192.168.1.1", "Mozilla/5.0")             // ip, agent
 t.Publish(ctx, "audits", event)
 
 // Publish custom data
@@ -161,7 +173,12 @@ t.Publish(ctx, "audits", map[string]any{
 })
 
 // Async publish (fire and forget)
-t.PublishAsync("audits", event)
+future, _ := t.PublishAsync("audits", event)
+
+// Publish raw bytes (pre-serialized JSON)
+data, _ := sonic.Marshal(event)
+t.PublishRaw(ctx, "audits", data)
+t.PublishRawAsync("audits", data)
 ```
 
 ### AuditEvent Fields
@@ -171,11 +188,25 @@ t.PublishAsync("audits", event)
 | Time | `time` | Event timestamp (_time_field) |
 | Stream | `stream` | Log stream identifier (_stream_fields) |
 | Msg | `msg` | Message content (_msg_field) |
-| Action | `action` | Operation type |
-| UserID | `user_id` | User identifier |
-| ClientIP | `client_ip` | Client IP address |
-| Resource | `resource` | Resource identifier |
-| Extra | `extra` | Additional data |
+| Platform | `platform` | Platform identifier (e.g., admin, api) |
+| Resource | `resource` | Resource type (e.g., user, order) |
+| Action | `action` | Operation type (e.g., create, update, delete) |
+| ObjectId | `object_id` | Object identifier (int, string, or []int for batch) |
+| UserId | `user_id` | User ID (int) |
+| Path | `path` | Request path |
+| IP | `ip` | Client IP address |
+| Extra | `extra` | Additional data (omitted if nil) |
+
+### Builder Methods
+
+| Method | Parameters | Description |
+|--------|------------|-------------|
+| `NewAuditEvent` | stream, msg | Create new event with timestamp |
+| `WithMeta` | platform, resource, action, objectId, userId | Set core metadata |
+| `WithRequest` | path, body | Set request info (body stored in Extra) |
+| `WithResponse` | code, response | Set response info (stored in Extra) |
+| `WithClient` | ip, agent | Set client info (agent stored in Extra if not empty) |
+| `WithExtra` | key, value | Add custom field to Extra |
 
 ## Scaling
 
@@ -187,4 +218,52 @@ stream: audits
 
 # Pod B
 stream: events
+```
+
+## Docker
+
+Dockerfile uses Alpine Linux base image:
+
+```dockerfile
+FROM alpine:edge
+RUN apk add tzdata
+WORKDIR /app
+ADD auditstream /app/
+CMD [ "./auditstream" ]
+```
+
+Build and run:
+
+```bash
+# Build static binary
+CGO_ENABLED=0 GOOS=linux go build -o auditstream
+
+# Build image
+docker build -t auditstream .
+
+# Run with config volume
+docker run -v ./config:/app/config auditstream
+```
+
+## Testing
+
+Integration tests require NATS connection. Set environment variables or create `.env` file:
+
+```bash
+NATS_NAMESPACE=test
+NATS_HOST=nats://127.0.0.1:4222
+NATS_TOKEN=s3cr3t
+```
+
+Run tests:
+
+```bash
+# Unit tests only
+go test -v ./transfer -run "^Test.*Event"
+
+# Integration tests (requires NATS)
+go test -v ./transfer
+
+# Bulk/stress tests
+go test -v ./transfer -run "Bulk|Continuous"
 ```

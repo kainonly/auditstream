@@ -3,8 +3,14 @@ name: Testing
 on:
   push:
     branches: [ v3 ]
+    paths-ignore:
+      - 'README*'
+      - 'docs/**'
   pull_request:
     branches: [ v3 ]
+    paths-ignore:
+      - 'README*'
+      - 'docs/**'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
