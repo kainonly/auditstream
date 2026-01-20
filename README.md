@@ -129,12 +129,6 @@ stream: auth
 stream: payments
 ```
 
-## Release Notes
-
-For detailed information about releases, please see:
-- [v3.0.0 Release Notes](./docs/RELEASE-v3.0.0.md)
-- [Changelog](./CHANGELOG.md)
-
 ## License
 
 [BSD-3-Clause License](LICENSE)
