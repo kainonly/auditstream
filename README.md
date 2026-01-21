@@ -8,7 +8,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/kainonly/auditstream?style=flat-square)](https://goreportcard.com/report/github.com/kainonly/auditstream)
 [![GitHub license](https://img.shields.io/github/license/kainonly/auditstream?style=flat-square)](https://raw.githubusercontent.com/kainonly/auditstream/v3/LICENSE)
 
-A lightweight service for collecting and persisting audit logs. It consumes audit events from a NATS JetStream queue and batch writes them to VictoriaLogs.
+A Go service for collecting and persisting audit logs. It consumes audit events from a NATS JetStream queue and batch writes them to VictoriaLogs.
 
 ## Overview
 
@@ -17,15 +17,16 @@ A lightweight service for collecting and persisting audit logs. It consumes audi
 ## Features
 
 - Push-based message consumption from NATS JetStream
-- Batch writes to VictoriaLogs with configurable buffer
+- Batch writes to VictoriaLogs with configurable buffer size and flush interval
 - Auto-create stream and consumer on startup
 - Graceful shutdown with final buffer flush
-- Cloud-native design: one stream per pod, scale horizontally
+- One stream per pod, horizontal scaling
 
-## Prerequisites
+## Requirements
 
-- NATS JetStream cluster
-- VictoriaLogs instance
+- Go 1.24+
+- NATS JetStream
+- VictoriaLogs
 
 ## Configuration
 
@@ -94,9 +95,17 @@ flush_interval: 5s
                   └─────────────────────────┘
 ```
 
+## Installation
+
+```bash
+go get github.com/kainonly/auditstream/v3
+```
+
 ## Transfer SDK
 
-Client SDK for publishing audit events.
+Client SDK for publishing audit events to NATS JetStream.
+
+### Basic Usage
 
 ```go
 import "github.com/kainonly/auditstream/v3/transfer"
@@ -105,13 +114,72 @@ import "github.com/kainonly/auditstream/v3/transfer"
 t, err := transfer.New(nc, "namespace")
 
 // Publish audit event
-event := transfer.NewAuditEvent("user-actions", "User logged in").
-    WithAction("login").
-    WithUser("user123", "192.168.1.1")
-t.Publish(ctx, "audits", event)
+event := transfer.NewAuditEvent("audits", "User logged in").
+    WithMeta("admin", "user", "login", 123, 456).
+    WithRequest("/api/login", map[string]any{"username": "test"}).
+    WithResponse(200, map[string]any{"success": true}).
+    WithClient("192.168.1.1", "Mozilla/5.0")
+
+err = t.Publish(ctx, "audits", event)
 
 // Async publish
-t.PublishAsync("audits", event)
+future, err := t.PublishAsync("audits", event)
+
+// Publish raw bytes (pre-serialized JSON)
+data, _ := sonic.Marshal(event)
+t.PublishRaw(ctx, "audits", data)
+```
+
+### AuditEvent Fields
+
+| Field | JSON | Description |
+|-------|------|-------------|
+| Time | `time` | Event timestamp |
+| Stream | `stream` | Log stream identifier |
+| Msg | `msg` | Message content |
+| Platform | `platform` | Platform identifier (e.g., admin, api) |
+| Resource | `resource` | Resource type (e.g., user, order) |
+| Action | `action` | Operation type (e.g., create, update, delete) |
+| ObjectId | `object_id` | Object identifier (int, string, or []int) |
+| UserId | `user_id` | User ID |
+| Path | `path` | Request path |
+| IP | `ip` | Client IP address |
+| Extra | `extra` | Additional data (omitted if nil) |
+
+### Builder Methods
+
+| Method | Parameters | Description |
+|--------|------------|-------------|
+| `NewAuditEvent` | stream, msg | Create event with current timestamp |
+| `WithMeta` | platform, resource, action, objectId, userId | Set core metadata |
+| `WithRequest` | path, body | Set request path and body (body stored in Extra) |
+| `WithResponse` | code, response | Set response code and data (stored in Extra) |
+| `WithClient` | ip, agent | Set client IP and user agent (agent stored in Extra) |
+| `WithExtra` | key, value | Add custom field to Extra |
+
+## Flush Logic
+
+Two conditions trigger a flush:
+
+1. **Batch size**: Buffer reaches `batch_size` (e.g., 100 messages)
+2. **Interval**: Every `flush_interval` (e.g., 5 seconds)
+
+```
+push(msg):
+    lock → append to buffer → unlock
+    if len(buffer) >= batch_size:
+        flush()
+
+flushLoop():
+    every flush_interval:
+        flush()
+    on stop signal:
+        flush()  // final flush before shutdown
+
+flush():
+    lock → swap buffer → unlock
+    if empty: return
+    write() → success: ACK all / failure: NAK all
 ```
 
 ## Scaling
@@ -127,6 +195,19 @@ stream: auth
 
 # Pod C: consumes alpha_payments
 stream: payments
+```
+
+## Docker
+
+```bash
+# Build static binary
+CGO_ENABLED=0 GOOS=linux go build -o auditstream
+
+# Build image
+docker build -t auditstream .
+
+# Run with config volume
+docker run -v ./config:/app/config auditstream
 ```
 
 ## License

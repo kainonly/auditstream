@@ -8,7 +8,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/kainonly/auditstream?style=flat-square)](https://goreportcard.com/report/github.com/kainonly/auditstream)
 [![GitHub license](https://img.shields.io/github/license/kainonly/auditstream?style=flat-square)](https://raw.githubusercontent.com/kainonly/auditstream/v3/LICENSE)
 
-轻量级审计日志收集与持久化服务。从 NATS JetStream 队列消费审计事件，批量写入 VictoriaLogs 进行长期存储与分析。
+Go 审计日志收集服务。从 NATS JetStream 队列消费审计事件，批量写入 VictoriaLogs。
 
 ## 概览
 
@@ -17,15 +17,16 @@
 ## 特性
 
 - 基于 Push 模式从 NATS JetStream 消费消息
-- 可配置的缓冲区批量写入 VictoriaLogs
+- 可配置缓冲区大小和写入间隔的批量写入
 - 启动时自动创建 Stream 和 Consumer
 - 优雅关闭，确保最后一批数据写入
-- 云原生设计：一个 Pod 消费一个 Stream，水平扩展
+- 一个 Pod 消费一个 Stream，支持水平扩展
 
-## 前置条件
+## 依赖
 
-- NATS JetStream 集群
-- VictoriaLogs 实例
+- Go 1.24+
+- NATS JetStream
+- VictoriaLogs
 
 ## 配置
 
@@ -56,7 +57,11 @@ flush_interval: 5s
 | `batch_size` | 缓冲区达到此数量时触发写入 |
 | `flush_interval` | 定时写入间隔 |
 
-本地测试可选加载 `.env`，示例见 `.env.example`。
+## 安装
+
+```bash
+go get github.com/kainonly/auditstream/v3
+```
 
 ## 数据流
 
@@ -125,6 +130,8 @@ flush():
 
 用于发送审计事件的客户端 SDK。
 
+### 基本用法
+
 ```go
 import "github.com/kainonly/auditstream/v3/transfer"
 
@@ -132,13 +139,20 @@ import "github.com/kainonly/auditstream/v3/transfer"
 t, err := transfer.New(nc, "namespace")
 
 // 发送审计事件
-event := transfer.NewAuditEvent("user-actions", "用户登录").
-    WithAction("login").
-    WithUser("user123", "192.168.1.1")
-t.Publish(ctx, "audits", event)
+event := transfer.NewAuditEvent("audits", "用户登录").
+    WithMeta("admin", "user", "login", 123, 456).
+    WithRequest("/api/login", map[string]any{"username": "test"}).
+    WithResponse(200, map[string]any{"success": true}).
+    WithClient("192.168.1.1", "Mozilla/5.0")
+
+err = t.Publish(ctx, "audits", event)
 
 // 异步发送
-t.PublishAsync("audits", event)
+future, err := t.PublishAsync("audits", event)
+
+// 发送原始字节（预序列化的 JSON）
+data, _ := sonic.Marshal(event)
+t.PublishRaw(ctx, "audits", data)
 ```
 
 ### AuditEvent 字段
@@ -148,11 +162,25 @@ t.PublishAsync("audits", event)
 | Time | `time` | 事件时间 |
 | Stream | `stream` | 日志流标识 |
 | Msg | `msg` | 消息内容 |
-| Action | `action` | 操作类型 |
-| UserID | `user_id` | 用户 ID |
-| ClientIP | `client_ip` | 客户端 IP |
-| Resource | `resource` | 资源标识 |
-| Extra | `extra` | 额外数据 |
+| Platform | `platform` | 平台标识（如 admin、api） |
+| Resource | `resource` | 资源类型（如 user、order） |
+| Action | `action` | 操作类型（如 create、update、delete） |
+| ObjectId | `object_id` | 对象 ID（int、string 或 []int） |
+| UserId | `user_id` | 用户 ID |
+| Path | `path` | 请求路径 |
+| IP | `ip` | 客户端 IP |
+| Extra | `extra` | 扩展数据（为 nil 时省略） |
+
+### 构建方法
+
+| 方法 | 参数 | 说明 |
+|------|------|------|
+| `NewAuditEvent` | stream, msg | 创建事件，自动设置当前时间 |
+| `WithMeta` | platform, resource, action, objectId, userId | 设置核心元数据 |
+| `WithRequest` | path, body | 设置请求路径和请求体（body 存入 Extra） |
+| `WithResponse` | code, response | 设置响应码和响应数据（存入 Extra） |
+| `WithClient` | ip, agent | 设置客户端 IP 和 User Agent（agent 存入 Extra） |
+| `WithExtra` | key, value | 添加自定义扩展字段 |
 
 ## 水平扩展
 
@@ -167,6 +195,19 @@ stream: auth
 
 # Pod C: 消费 alpha_payments
 stream: payments
+```
+
+## Docker
+
+```bash
+# 编译静态二进制
+CGO_ENABLED=0 GOOS=linux go build -o auditstream
+
+# 构建镜像
+docker build -t auditstream .
+
+# 挂载配置运行
+docker run -v ./config:/app/config auditstream
 ```
 
 ## 许可证
